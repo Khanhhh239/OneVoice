@@ -11,4 +11,3 @@ transformers>=4.40
 datasets>=2.16
 jiwer>=3.0
 funasr>=1.1
-torchcodec>=0.1  # needed by datasets>=4.x to decode Audio() features (replaces old soundfile path)

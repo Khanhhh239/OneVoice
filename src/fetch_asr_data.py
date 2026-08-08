@@ -10,12 +10,14 @@ N_PER_LANG examples per language.
 Separate from data/clean/ (Step 0's VAD/denoise/beamform test audio, which
 never needed transcripts) -- writes to data/asr/<lang>/*.wav + manifest.json.
 """
+import io
 import os
 import json
 
 import librosa
 import numpy as np
-from datasets import load_dataset
+import soundfile as sf
+from datasets import load_dataset, Audio
 
 from common import SR, save_wav
 
@@ -36,11 +38,22 @@ def fetch_lang(lang, config, n):
           f"first {n} test examples -- first run downloads that language's "
           f"shard, can take a few minutes, HF's own progress bars will show.")
     ds = load_dataset("google/fleurs", config, split=f"test[:{n}]")
+    # Decode audio ourselves via soundfile instead of `datasets`' built-in
+    # decoder (torchcodec) -- torchcodec needs a matching FFmpeg install with
+    # DLLs on Windows, which failed to load on this machine. soundfile has
+    # been reliable throughout this whole project, so skip torchcodec.
+    ds = ds.cast_column("audio", Audio(decode=False))
     items = []
     for i, ex in enumerate(ds):
-        audio = ex["audio"]
-        wav = np.asarray(audio["array"], dtype=np.float32)
-        sr = audio["sampling_rate"]
+        audio_info = ex["audio"]
+        raw_bytes = audio_info.get("bytes")
+        if raw_bytes is not None:
+            wav, sr = sf.read(io.BytesIO(raw_bytes), dtype="float32", always_2d=False)
+        else:
+            wav, sr = sf.read(audio_info["path"], dtype="float32", always_2d=False)
+        if wav.ndim > 1:
+            wav = wav.mean(axis=1)
+        wav = wav.astype(np.float32)
         if sr != SR:
             wav = librosa.resample(wav, orig_sr=sr, target_sr=SR)
         text = (ex.get("transcription") or ex.get("raw_transcription") or "").strip()
