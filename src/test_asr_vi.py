@@ -67,6 +67,7 @@ def main():
     if device.type == "cuda":
         model = model.half()
 
+    os.makedirs(OUT_DIR, exist_ok=True)
     rows = []
     for item in items:
         path = os.path.join(ROOT, item["path"])
