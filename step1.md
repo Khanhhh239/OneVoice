@@ -1,6 +1,6 @@
 # Step 1: ASR — Nhận dạng giọng nói (Speech → Text, Streaming, 4 ngôn ngữ)
 
-**Status:** Phân tích kiến trúc dựa trên research thật (paper + benchmark đã verify qua web search). **Chưa code-test** — đây là bước phân tích/quyết định kiến trúc, giống step0.md giai đoạn 1 trước khi viết code đo RTF/WER thật.
+**Status:** Phân tích kiến trúc dựa trên research thật (paper + benchmark đã verify qua web search). Code test đã viết cho cả kiến trúc chính (PhoWhisper + SenseVoice) lẫn 3 candidate mới phát hiện sau (Zipformer-30M, Moonshine, Qwen3-ASR — xem 12) — đang chờ chạy thật để so sánh, khuyến nghị Part A dưới đây coi là tạm thời, chưa chốt cho tới khi có số WER/RTF thật.
 
 ---
 
@@ -242,7 +242,23 @@ PhoWhisper đã có sẵn augmentation cơ bản (audiomentations trên nửa tr
 
 Zipformer, dù không dùng ngay được, đáng ghi nhận về kiến trúc: streaming qua RNN-T joiner incremental là thiết kế "đúng bài" hơn cách hiện tại (model offline + LocalAgreement/AlignAtt gắn thêm ngoài). Nếu sau này có thời gian/dữ liệu để tự train 1 model Zipformer tiếng Việt, đây là lựa chọn kiến trúc streaming tốt — nhưng cần train from scratch (không có checkpoint Zipformer tiếng Việt public), vi phạm ràng buộc "hạn chế train" hiện tại nên chỉ ghi nhận làm hướng tương lai, không đưa vào phạm vi bây giờ.
 
+### 12. Rà soát lại 2026: 3 candidate mới có bằng chứng vượt PhoWhisper/SenseVoice
+
+Khi được hỏi thẳng "lựa chọn này đã đảm bảo quality/latency tốt nhất chưa", research trước đó chỉ bám theo đúng các paper trong đề bài gốc — chưa quét toàn cảnh model 2025-2026. Quét lại phát hiện 3 candidate có bằng chứng cụ thể tốt hơn:
+
+| Model | Ngôn ngữ | Tham số | Bằng chứng | Rủi ro |
+|---|---|---|---|---|
+| **Zipformer-30M-RNNT-6000h** ([HF](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)) | Chỉ Việt (thay PhoWhisper) | 30M | WER thấp hơn PhoWhisper-large dù nhỏ hơn 50 lần (train 6000h vs 844h); RTF ~0.025 trên CPU; streaming native (RNN-T) | **License CC-BY-NC-ND-4.0** — cấm thương mại + cấm sửa đổi, cần xác nhận điều khoản cuộc thi trước khi dùng ngoài phạm vi so sánh |
+| **Moonshine** ([UsefulSensors](https://huggingface.co/UsefulSensors)) | Việt+Anh+Trung+Hàn — 4 model đơn ngữ riêng (moonshine-tiny-{vi,zh,ko} + moonshine-tiny cho Anh) | ~27M/model | Giảm lỗi 48% so với Whisper-Tiny, đôi khi ngang Whisper-Medium dù nhỏ hơn 28 lần; load qua transformers chuẩn giống PhoWhisper | Chưa rõ license thương mại; chưa test thật trên data mình |
+| **Qwen3-ASR-0.6B** ([HF](https://huggingface.co/Qwen/Qwen3-ASR-0.6B-hf)) | 1 model DUY NHẤT cho cả 4 ngôn ngữ (30+ ngôn ngữ, gồm Việt/Hàn/Trung) | 0.6B | Time-to-first-token 92ms; nếu chất lượng tiếng Việt đủ tốt, có thể **gộp thay cả PhoWhisper lẫn SenseVoice thành 1 model** | Cần transformers>=5.13.0 (nhảy version lớn, có thể xung đột với funasr); model đa ngôn ngữ tổng quát thường thua specialist ở ngôn ngữ ít tài nguyên như tiếng Việt — đúng rủi ro đã nêu ở Option A (§2.3), cần test thật mới biết |
+
+**Đã viết code test cho cả 3** (test_asr_zipformer.py, test_asr_moonshine.py, test_asr_qwen.py), chạy qua run_all_asr.py cùng với PhoWhisper/SenseVoice hiện tại, ra outputs/asr_{vi,multi,zipformer,moonshine,qwen}_results.csv để so sánh WER/CER/RTF trên cùng bộ data thật.
+
+**Mức độ tin cậy code**: test_asr_moonshine.py rủi ro thấp nhất (dùng đúng pattern transformers.pipeline đã chạy ổn với PhoWhisper). test_asr_zipformer.py rủi ro trung bình (phụ thuộc sherpa-onnx + tự dò file token, chưa xác nhận 100% layout repo). test_asr_qwen.py rủi ro cao nhất (API rất mới, cần transformers>=5.13.0, có fallback nhưng chưa test thật).
+
+**Kết luận tạm thời**: KHÔNG chốt kiến trúc Part A cho tới khi có số thật. Nếu Zipformer-30M thắng rõ về WER/RTF và license được cuộc thi chấp nhận (NC-ND), nên thay PhoWhisper. Nếu Qwen3-ASR-0.6B giữ WER tiếng Việt đủ tốt, cân nhắc gộp thành kiến trúc 1-model duy nhất, đơn giản hoá đáng kể so với split hiện tại.
+
 ---
 
-**Document version:** 2026-08-08 (research-based, chưa code-test)
-**Bước tiếp theo:** chạy `python src/run_all_asr.py` (code đã viết, xem hướng dẫn trong chat) để lấy WER/CER/RTF thật; cân nhắc thử `qai-hub` profiling cho PhoWhisper theo §11 nếu cần số Snapdragon thật cho §4.4.
+**Document version:** 2026-08-08 (research-based; code viết cho cả kiến trúc chính lẫn 3 candidate mới, chưa chạy thật)
+**Bước tiếp theo:** chạy `python src/run_all_asr.py` để lấy WER/CER/RTF thật cho cả 5 model (PhoWhisper, SenseVoice, Zipformer-30M, Moonshine, Qwen3-ASR); dựa vào số thật + xác nhận license để chốt kiến trúc cuối cùng cho Part A.

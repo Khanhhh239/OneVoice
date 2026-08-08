@@ -11,3 +11,10 @@ transformers>=4.40
 datasets>=2.16
 jiwer>=3.0
 funasr>=1.1
+sherpa-onnx>=1.10       # test_asr_zipformer.py
+sentencepiece>=0.2      # test_asr_zipformer.py, only used if repo lacks tokens.txt
+huggingface-hub>=0.24   # test_asr_zipformer.py (snapshot_download)
+# test_asr_qwen.py needs transformers>=5.13.0 specifically -- that's a big
+# jump from the >=4.40 pinned above and may conflict with funasr's own
+# transformers pin. Install it in isolation (venv/conda env) if `pip install
+# -U transformers` here breaks test_asr_vi.py / test_asr_multi.py.
