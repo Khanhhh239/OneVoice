@@ -13,6 +13,26 @@ import torch
 
 from common import SR, get_device, list_audio_files, load_wav, save_wav, rtf
 
+
+def _ensure_torchaudio_importable():
+    """Silero's hubconf imports torchaudio at module level, but only USES it
+    inside read_audio()/save_audio() -- functions we never call (we load
+    audio ourselves via soundfile/librosa in common.py). If the local
+    torch/torchaudio install is ABI-mismatched (common on Windows, shows up
+    as `OSError: [WinError 127] The specified procedure could not be
+    found`), stub the module out instead of requiring an environment fix."""
+    try:
+        import torchaudio  # noqa: F401
+    except Exception as e:
+        import sys
+        import types
+        stub = types.ModuleType("torchaudio")
+        stub.__version__ = "0.0.0-stub"
+        sys.modules["torchaudio"] = stub
+        print(f"[test_vad] WARNING: real torchaudio failed to import ({e!r}); "
+              f"using a stub so Silero VAD can still load "
+              f"(not needed for this test path).")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIXED_DIR = os.path.join(ROOT, "data", "mixed")
 CLEAN_DIR = os.path.join(ROOT, "data", "clean")
@@ -21,6 +41,7 @@ RESULTS_CSV = os.path.join(ROOT, "outputs", "vad_results.csv")
 
 
 def load_silero():
+    _ensure_torchaudio_importable()
     model, utils = torch.hub.load(
         repo_or_dir="snakers4/silero-vad",
         model="silero_vad",
