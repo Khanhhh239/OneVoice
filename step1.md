@@ -293,5 +293,36 @@ Khi được hỏi thẳng "lựa chọn này đã đảm bảo quality/latency 
 
 ---
 
-**Document version:** 2026-08-08 (code-tested: PhoWhisper vs Zipformer với SNR robustness real-world; Moonshine/Qwen chưa test)
-**Bước tiếp theo:** (1) Xác nhận license Zipformer-30M với ban tổ chức; (2) Nếu OK, chốt Part A = Zipformer-30M (Vi) + SenseVoice-Small (En/Zh/Ko). Nếu không, fallback Moonshine hoặc Qwen3-ASR.
+### 14. Moonshine (4 ngôn ngữ) đo thật -- thua rõ cho nhánh Việt, chưa có gì để so với SenseVoice
+
+**WER/CER trung bình theo SNR (120 dòng: 4 ngôn ngữ x 6 điều kiện x 5 file):**
+
+| Ngôn ngữ | Sạch | 20dB | 15dB | 10dB | 5dB | 0dB |
+|---|---|---|---|---|---|---|
+| Việt (WER) | 7.7% | 7.1% | 8.2% | 11.2% | 26.1% | 16.4% |
+| Anh (WER) | 9.6% | 9.6% | 15.7% | 25.3% | 20.2% | 25.1% |
+| Trung (CER) | 16.2% | 19.1% | 15.7% | 10.0% | 16.3% | 78.6%* |
+| Hàn (CER) | 8.1% | 9.1% | 9.2% | 10.2% | 23.6% | 37.0% |
+
+*0dB tiếng Trung là outlier, chưa điều tra sâu thêm -- có thể là suy sập thật ở mức nhiễu cực đoan (1:1 tín hiệu/nhiễu), không phải lỗi đo.
+
+**Bug quan trọng đã fix trước khi có bảng trên**: CER tiếng Trung ban đầu đo ra 49-71% (trông như model vô dụng), hoá ra do file tham chiếu FLEURS-zh chèn dấu cách giữa MỖI ký tự Hán (kiểu "这 并 不 是"), trong khi model xuất ra liền mạch bình thường ("这并不是") -- `jiwer.cer()` tính mỗi khoảng trắng thừa đó thành 1 lỗi xoá. Thêm `normalize_text_for_cer()` (xoá sạch whitespace trước khi tính CER, chỉ áp dụng cho CER, KHÔNG áp dụng cho WER vì đó là ranh giới từ thật) vào `common.py`, sửa cả 3 script tính CER (Moonshine, SenseVoice, Qwen -- cùng 1 dòng code copy-paste nên cùng dính bug).
+
+**So sánh 3 model tiếng Việt (đã có đủ số thật):**
+
+| SNR | PhoWhisper | Zipformer-30M | Moonshine-tiny-vi |
+|---|---|---|---|
+| Sạch | 5.51% | 5.35% | 7.7% |
+| 5dB | 13.47% | **6.22%** | 26.1% |
+| 0dB | 8.01% | **4.10%** | 16.4% |
+
+**Moonshine thua rõ cả PhoWhisper lẫn Zipformer ở mọi mức SNR cho tiếng Việt** -- loại khỏi nhánh Việt. Không đổi kết luận §13 (Zipformer-30M vẫn là lựa chọn tốt nhất cho Vi, chờ xác nhận license).
+
+**Nhánh En/Zh/Ko vẫn CHƯA có gì để so sánh** -- `test_asr_multi.py` (SenseVoice-Small, lựa chọn hiện tại) chưa từng chạy thành công trong suốt quá trình test. Moonshine's En/Zh/Ko numbers ở trên là số ĐỨNG MỘT MÌNH, chưa biết SenseVoice tốt hơn hay kém hơn.
+
+**Qwen3-ASR-0.6B**: code đã chạy được (không còn crash), nhưng venv riêng (`venv_qwen`) không có torch bản CUDA (`pip install -r requirements.txt` trong venv trống tải bản PyPI mặc định, CPU-only) nên chạy rất chậm -- chưa lấy được bộ số đầy đủ để so sánh RTF công bằng.
+
+---
+
+**Document version:** 2026-08-08 (code-tested: PhoWhisper/Zipformer/Moonshine đều có số thật cho Vi; SenseVoice và Qwen3-ASR đầy đủ vẫn còn thiếu)
+**Bước tiếp theo:** (1) Chạy `test_asr_multi.py` (SenseVoice) để có baseline En/Zh/Ko thật; (2) cài torch CUDA vào `venv_qwen` nếu muốn số RTF Qwen công bằng; (3) xác nhận license Zipformer-30M với ban tổ chức; (4) chốt Part A.
