@@ -54,22 +54,32 @@ def main():
               "(and mix_asr_noise.py for noisy conditions) first.")
         return
 
-    from transformers import pipeline
-    asr = pipeline(
-        "automatic-speech-recognition",
-        model=MODEL_ID,
-        device=0 if device.type == "cuda" else -1,
-        torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
-    )
+    # NOTE: deliberately NOT using transformers.pipeline() here -- its
+    # AutomaticSpeechRecognitionPipeline.preprocess() unconditionally
+    # `import torchcodec` even when given an already-decoded array, and
+    # torchcodec needs a matching FFmpeg DLL install that failed on this
+    # machine (same failure as fetch_asr_data.py hit). Calling the
+    # processor/model directly skips that code path entirely -- the
+    # feature extractor only needs the raw waveform we already have.
+    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+    processor = AutoProcessor.from_pretrained(MODEL_ID)
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(MODEL_ID).to(device)
+    if device.type == "cuda":
+        model = model.half()
 
     rows = []
     for item in items:
         path = os.path.join(ROOT, item["path"])
         wav = load_wav(path)
         t0 = time.perf_counter()
-        result = asr({"raw": wav, "sampling_rate": SR})
+        inputs = processor(wav, sampling_rate=SR, return_tensors="pt")
+        input_features = inputs.input_features.to(device)
+        if device.type == "cuda":
+            input_features = input_features.half()
+        with torch.no_grad():
+            predicted_ids = model.generate(input_features)
+        hyp = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
         elapsed = time.perf_counter() - t0
-        hyp = result["text"].strip()
         ref = item["transcript"]
         wer = jiwer.wer(normalize_text(ref), normalize_text(hyp))
         r = rtf(elapsed, len(wav) / SR)

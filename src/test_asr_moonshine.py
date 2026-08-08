@@ -59,29 +59,38 @@ def main():
               "(and mix_asr_noise.py for noisy conditions) first.")
         return
 
-    from transformers import pipeline
-    pipes = {}  # lazy-load one pipeline per language, only as needed
+    # NOTE: deliberately NOT using transformers.pipeline() -- see the note
+    # in test_asr_vi.py: its preprocess() unconditionally imports torchcodec
+    # even for already-decoded arrays, and torchcodec's FFmpeg DLL failed to
+    # load on this machine. Direct processor/model calls skip that path.
+    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+    models = {}  # lazy-load one (processor, model) pair per language
 
     rows = []
     for item in items:
         lang = item["lang"]
         if lang not in MODEL_IDS:
             continue
-        if lang not in pipes:
+        if lang not in models:
             print(f"[test_asr_moonshine] loading {MODEL_IDS[lang]} for '{lang}'...")
-            pipes[lang] = pipeline(
-                "automatic-speech-recognition",
-                model=MODEL_IDS[lang],
-                device=0 if device.type == "cuda" else -1,
-                torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
-            )
+            proc = AutoProcessor.from_pretrained(MODEL_IDS[lang])
+            mdl = AutoModelForSpeechSeq2Seq.from_pretrained(MODEL_IDS[lang]).to(device)
+            if device.type == "cuda":
+                mdl = mdl.half()
+            models[lang] = (proc, mdl)
+        processor, model = models[lang]
 
         path = os.path.join(ROOT, item["path"])
         wav = load_wav(path)
         t0 = time.perf_counter()
-        result = pipes[lang]({"raw": wav, "sampling_rate": SR})
+        inputs = processor(wav, sampling_rate=SR, return_tensors="pt")
+        input_features = inputs.input_features.to(device)
+        if device.type == "cuda":
+            input_features = input_features.half()
+        with torch.no_grad():
+            predicted_ids = model.generate(input_features)
+        hyp = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
         elapsed = time.perf_counter() - t0
-        hyp = result["text"].strip()
         ref = item["transcript"]
 
         metric = "cer" if lang in CER_LANGS else "wer"
