@@ -1,5 +1,6 @@
 """Shared helpers for Step-0 (Audio Front-end) tests: VAD, denoise, beamform."""
 import os
+import re
 import glob
 import time
 
@@ -56,3 +57,13 @@ class Timer:
 def rtf(process_seconds, audio_seconds):
     """Real-Time Factor = processing time / audio duration. <1 = faster than real-time."""
     return process_seconds / max(audio_seconds, 1e-9)
+
+
+def normalize_text(s):
+    """Lowercase + strip punctuation/extra whitespace for fair WER/CER comparison.
+    \\w is Unicode-aware in Python 3, so accented/tonal letters (Vietnamese, etc.)
+    are kept -- only punctuation and casing are normalized away."""
+    s = s.lower().strip()
+    s = re.sub(r"[^\w\s]", "", s, flags=re.UNICODE)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
