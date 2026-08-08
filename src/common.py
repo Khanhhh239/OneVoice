@@ -13,6 +13,26 @@ SR = 16000
 AUDIO_EXT = ("*.wav", "*.flac", "*.mp3", "*.m4a", "*.ogg")
 
 
+def _ensure_utf8_stdout():
+    """Windows' console often leaves Python's stdout/stderr on a legacy
+    codepage (cp1252), which can't encode Vietnamese/Chinese/Korean text --
+    print() then raises UnicodeEncodeError on the first non-Latin1 character
+    (e.g. 'a with breve'), crashing a run after all the actual work (model
+    inference, WER/CER scoring, CSV write) already succeeded. Force UTF-8 so
+    printing a transcribed hypothesis for a live progress log can't do that."""
+    import sys
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
+_ensure_utf8_stdout()
+
+
 def _stub_broken_torchaudio():
     """torchaudio's native extension can be ABI-incompatible with the
     installed torch build (seen on this machine as WinError 127 / "procedure
@@ -98,3 +118,15 @@ def normalize_text(s):
     s = re.sub(r"[^\w\s]", "", s, flags=re.UNICODE)
     s = re.sub(r"\s+", " ", s).strip()
     return s
+
+
+def normalize_text_for_cer(s):
+    """normalize_text() then strip ALL whitespace, for character-level (CER)
+    scoring only. Some CJK reference transcripts (FLEURS zh, confirmed by
+    inspection) insert a space between every character; jiwer.cer() counts
+    those spaces as real characters, so a hypothesis with normal (no
+    inter-character space) output gets scored as if every character were a
+    deletion -- inflating CER from ~5% to ~50%+ on otherwise near-perfect
+    transcriptions. Word-level WER scoring must NOT use this: spaces are the
+    actual word boundaries there."""
+    return re.sub(r"\s+", "", normalize_text(s))

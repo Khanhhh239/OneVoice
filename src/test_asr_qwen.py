@@ -26,7 +26,7 @@ import time
 
 import jiwer
 
-from common import SR, get_device, load_wav, rtf, normalize_text
+from common import SR, get_device, load_wav, rtf, normalize_text, normalize_text_for_cer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASR_DIR = os.path.join(ROOT, "data", "asr")
@@ -105,8 +105,10 @@ def main():
         ref = item["transcript"]
 
         metric = "cer" if lang in CER_LANGS else "wer"
-        ref_n, hyp_n = normalize_text(ref), normalize_text(hyp)
-        score = jiwer.cer(ref_n, hyp_n) if metric == "cer" else jiwer.wer(ref_n, hyp_n)
+        if metric == "cer":
+            score = jiwer.cer(normalize_text_for_cer(ref), normalize_text_for_cer(hyp))
+        else:
+            score = jiwer.wer(normalize_text(ref), normalize_text(hyp))
         r = rtf(elapsed, len(wav) / SR)
 
         row = {

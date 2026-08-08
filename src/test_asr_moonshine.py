@@ -14,7 +14,7 @@ import time
 import torch
 import jiwer
 
-from common import SR, get_device, load_wav, rtf, normalize_text
+from common import SR, get_device, load_wav, rtf, normalize_text, normalize_text_for_cer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASR_DIR = os.path.join(ROOT, "data", "asr")
@@ -84,18 +84,24 @@ def main():
         wav = load_wav(path)
         t0 = time.perf_counter()
         inputs = processor(wav, sampling_rate=SR, return_tensors="pt")
-        input_features = inputs.input_features.to(device)
+        # NOTE: Moonshine feeds the raw waveform straight to its encoder (no
+        # mel-spectrogram front-end like Whisper), so the processor output
+        # exposes `.input_values`, not `.input_features` -- confirmed against
+        # the official model doc after a KeyError: 'input_features' crash.
+        input_values = inputs.input_values.to(device)
         if device.type == "cuda":
-            input_features = input_features.half()
+            input_values = input_values.half()
         with torch.no_grad():
-            predicted_ids = model.generate(input_features)
+            predicted_ids = model.generate(input_values)
         hyp = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
         elapsed = time.perf_counter() - t0
         ref = item["transcript"]
 
         metric = "cer" if lang in CER_LANGS else "wer"
-        ref_n, hyp_n = normalize_text(ref), normalize_text(hyp)
-        score = jiwer.cer(ref_n, hyp_n) if metric == "cer" else jiwer.wer(ref_n, hyp_n)
+        if metric == "cer":
+            score = jiwer.cer(normalize_text_for_cer(ref), normalize_text_for_cer(hyp))
+        else:
+            score = jiwer.wer(normalize_text(ref), normalize_text(hyp))
         r = rtf(elapsed, len(wav) / SR)
 
         row = {
