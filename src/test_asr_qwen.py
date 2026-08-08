@@ -7,10 +7,17 @@ does one generalist model hold up on Vietnamese specifically vs the
 PhoWhisper specialist (generalists usually lose on lower-resource
 languages -- see step1.md SS2.3's take on Option A).
 
-NOTE: least proven script of the 4 candidates -- needs transformers>=5.13.0
-(a big jump; may need a separate env if it conflicts with funasr's pin).
-Tries the simple `pipeline(...)` call first, falls back to the documented
-AutoProcessor/AutoModelForMultimodalLM path if that doesn't work.
+NOTE: needs transformers>=5.13.0 (a big jump; may need a separate env if it
+conflicts with funasr's pin). Uses ONLY the documented AutoProcessor /
+AutoModelForMultimodalLM path -- an earlier version also tried the generic
+transformers.pipeline() call first, but that silently used Whisper-style
+mel-spectrogram preprocessing (padded to 3000 frames) which doesn't match
+this model's actual multimodal input format and crashed on every single
+file with a tensor-shape mismatch. Qwen3-ASR-0.6B-hf is a multimodal-LM
+architecture, not a plain AutoModelForSpeechSeq2Seq, so the pipeline's
+auto-detected preprocessing was simply wrong for it -- not fixable by
+changing the input format, hence dropped entirely rather than kept as a
+"try first" path.
 """
 import os
 import csv
@@ -49,30 +56,17 @@ def load_items():
     return items
 
 
-def load_qwen_pipeline(device):
-    from transformers import pipeline
-    return pipeline(
-        "automatic-speech-recognition",
-        model=MODEL_ID,
-        device=0 if device.type == "cuda" else -1,
-        trust_remote_code=True,
-    )
-
-
-def load_qwen_fallback(device):
+def load_qwen(device):
     from transformers import AutoProcessor, AutoModelForMultimodalLM
     processor = AutoProcessor.from_pretrained(MODEL_ID)
     model = AutoModelForMultimodalLM.from_pretrained(
         MODEL_ID, device_map="auto" if device.type == "cuda" else None)
+    if device.type != "cuda":
+        model = model.to(device)
     return processor, model
 
 
-def run_pipeline(pipe, wav):
-    result = pipe({"raw": wav, "sampling_rate": SR})
-    return result["text"].strip()
-
-
-def run_fallback(processor, model, path):
+def transcribe(processor, model, path):
     inputs = processor.apply_transcription_request(audio=path).to(
         model.device, model.dtype)
     output_ids = model.generate(**inputs, max_new_tokens=256)
@@ -90,14 +84,7 @@ def main():
               "(and mix_asr_noise.py for noisy conditions) first.")
         return
 
-    mode = "pipeline"
-    try:
-        pipe = load_qwen_pipeline(device)
-    except Exception as e:
-        print(f"[test_asr_qwen] pipeline() load failed ({e!r}), "
-              f"trying AutoProcessor/AutoModelForMultimodalLM fallback...")
-        mode = "fallback"
-        processor, model = load_qwen_fallback(device)
+    processor, model = load_qwen(device)
 
     rows = []
     for item in items:
@@ -106,8 +93,7 @@ def main():
         wav = load_wav(path)
         t0 = time.perf_counter()
         try:
-            hyp = run_pipeline(pipe, wav) if mode == "pipeline" else run_fallback(
-                processor, model, path)
+            hyp = transcribe(processor, model, path)
         except Exception as e:
             print(f"[test_asr_qwen] FAILED on {item['path']}: {e!r} -- skipping")
             continue
@@ -126,7 +112,6 @@ def main():
             "metric": metric,
             "score": round(score, 4),
             "rtf": round(r, 5),
-            "mode": mode,
             "reference": ref,
             "hypothesis": hyp,
         }
