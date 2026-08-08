@@ -58,9 +58,13 @@ def load_items():
 
 def load_qwen(device):
     from transformers import AutoProcessor, AutoModelForMultimodalLM
-    processor = AutoProcessor.from_pretrained(MODEL_ID)
+    # trust_remote_code=True: qwen3_asr is new enough that its architecture
+    # isn't registered in transformers' own CONFIG_MAPPING yet -- the repo
+    # ships its own modeling code, which Auto* only loads with this flag.
+    processor = AutoProcessor.from_pretrained(MODEL_ID, trust_remote_code=True)
     model = AutoModelForMultimodalLM.from_pretrained(
-        MODEL_ID, device_map="auto" if device.type == "cuda" else None)
+        MODEL_ID, trust_remote_code=True,
+        device_map="auto" if device.type == "cuda" else None)
     if device.type != "cuda":
         model = model.to(device)
     return processor, model
