@@ -13,6 +13,29 @@ SR = 16000
 AUDIO_EXT = ("*.wav", "*.flac", "*.mp3", "*.m4a", "*.ogg")
 
 
+def _stub_broken_torchaudio():
+    """torchaudio's native extension can be ABI-incompatible with the
+    installed torch build (seen on this machine as WinError 127 / "procedure
+    not found"). Nothing here calls torchaudio directly, but some libraries
+    `import torchaudio` unconditionally at import time -- silero's hubconf,
+    and transformers>=5.13's audio_utils (pulled in by any AutoProcessor
+    import, needed for Qwen3-ASR). Stub it out before that first real import
+    happens; once a module is in sys.modules, every later `import torchaudio`
+    anywhere else in the process just reuses this harmless stub instead of
+    re-running torchaudio's real (crashing) init code."""
+    try:
+        import torchaudio  # noqa: F401
+    except Exception:
+        import sys
+        import types
+        stub = types.ModuleType("torchaudio")
+        stub.__version__ = "0.0.0-stub"
+        sys.modules["torchaudio"] = stub
+
+
+_stub_broken_torchaudio()
+
+
 def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
