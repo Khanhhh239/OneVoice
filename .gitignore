@@ -1,0 +1,11 @@
+data/**/*.wav
+data/**/*.flac
+data/**/*.mp3
+data/**/*.m4a
+data/**/*.ogg
+!data/**/.gitkeep
+data/mixed/
+outputs/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

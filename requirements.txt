@@ -1,0 +1,9 @@
+torch>=2.0
+soundfile>=0.12
+librosa>=0.10
+numpy>=1.24
+einops>=0.7
+pesq>=0.0.4
+pystoi>=0.3
+pyroomacoustics>=0.7
+pandas>=2.0
