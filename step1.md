@@ -222,7 +222,27 @@ PhoWhisper đã có sẵn augmentation cơ bản (audiomentations trên nửa tr
 - **Sang Step 2 (MT)**: xuất `partial`/`final` text kèm nhãn ngôn ngữ. MT cần xử lý được text `partial` thay đổi liên tục (không đợi `final` mới dịch, để giữ độ trễ thấp) — đây là input cho thiết kế AlignAtt-policy ở Step 2 (đã đề cập rủi ro Vi↔Ko/Vi↔Zh ít dữ liệu song song trong phân tích Step 0 trước đó).
 - **Lưu ý thiết kế**: phương án C (Canary) cho thấy một hướng thay thế là gộp Step 1+2 thành 1 model dịch trực tiếp — không chọn làm chính nhưng đáng thử nghiệm nhỏ ở giai đoạn sau nếu có thời gian, vì AlignAtt/SimulStreaming đã có sẵn hạ tầng streaming dùng chung.
 
+### 11. Qualcomm AI Hub: có nên đổi sang Zipformer / Distil-Whisper? (bổ sung 08/2026)
+
+Đã fetch trực tiếp 2 trang [Zipformer](https://aihub.qualcomm.com/mobile/models/zipformer) và [Distil-Whisper](https://aihub.qualcomm.com/mobile/models/distil_whisper) trên Qualcomm AI Hub — nơi Qualcomm tự tối ưu/verify model cho chính Snapdragon — để xem có nên thay PhoWhisper/SenseVoice không.
+
+| | Zipformer (AI Hub) | Distil-Whisper (AI Hub) |
+|---|---|---|
+| Ngôn ngữ | Anh + Trung (checkpoint song ngữ) | **Chỉ tiếng Anh** |
+| Kiến trúc | Streaming transducer (encoder+decoder+joiner), ~70M tham số tổng — rất nhẹ | Whisper-small distilled, ~377M tham số |
+| Streaming | Có, **native** (joiner incremental — không cần LocalAgreement/AlignAtt gắn thêm) | Không công bố |
+| License | Apache 2.0 | MIT |
+| Trạng thái Snapdragon | Trang tự ghi **"hiện chưa hỗ trợ trên chipset di động nào"** dù có liệt kê thiết bị tương thích | Không thấy số latency công bố trong lần fetch này |
+
+**Kết luận: không thay được PhoWhisper/SenseVoice** — lý do dứt khoát: **cả 2 đều không có tiếng Việt** (Zipformer: Anh+Trung; Distil-Whisper: chỉ Anh). Dù tối ưu phần cứng tốt đến đâu cũng không dùng được cho phần quan trọng nhất hệ thống. Kể cả nếu chỉ định thay nhánh En/Zh/Ko: Zipformer thiếu tiếng Hàn, Distil-Whisper thiếu cả Hàn lẫn Trung → phải cõng thêm 1-2 model nữa, đi ngược hướng gộp gọn đã chọn ở §2.3.
+
+**Nhưng có 1 insight thật đáng dùng**: Distil-Whisper cùng họ kiến trúc Whisper với PhoWhisper (encoder-decoder transformer, chỉ khác trọng số). Nếu Qualcomm đã có sẵn pipeline convert/quantize Whisper-family chạy trên Snapdragon (kể cả khi lần fetch này chưa thấy số latency cụ thể — trang AI Hub thường có bảng latency theo từng chip hiển thị động/JS-rendered mà công cụ fetch tự động có thể chưa lấy hết, nên **tự mở link trực tiếp để xem số** trước khi quyết định), nhiều khả năng **cùng pipeline đó áp dụng lại được cho checkpoint PhoWhisper** — đây là cách thực tế để lấy số RTF Snapdragon **thật** thay vì "ước lượng" như hiện tại (xem step0.md §3.2, phần hardware, đang ghi rõ là số estimate chưa đo).
+
+**Đề xuất bổ sung vào quy trình test (§6)**: thêm 1 bước dùng `qai-hub` (Python package của Qualcomm) thử convert/quantize PhoWhisper-small sang QNN, profile trên 1 chip Snapdragon thật qua dịch vụ remote-profile miễn phí của họ — rẻ nhất để retire rủi ro "RTF Snapdragon mới chỉ là ước lượng".
+
+Zipformer, dù không dùng ngay được, đáng ghi nhận về kiến trúc: streaming qua RNN-T joiner incremental là thiết kế "đúng bài" hơn cách hiện tại (model offline + LocalAgreement/AlignAtt gắn thêm ngoài). Nếu sau này có thời gian/dữ liệu để tự train 1 model Zipformer tiếng Việt, đây là lựa chọn kiến trúc streaming tốt — nhưng cần train from scratch (không có checkpoint Zipformer tiếng Việt public), vi phạm ràng buộc "hạn chế train" hiện tại nên chỉ ghi nhận làm hướng tương lai, không đưa vào phạm vi bây giờ.
+
 ---
 
 **Document version:** 2026-08-08 (research-based, chưa code-test)
-**Bước tiếp theo:** viết code test PhoWhisper + SenseVoice trên audio thật (tái sử dụng `data/clean/`, `data/mixed/` đã có từ Step 0) để lấy WER/CER/RTF thật, giống quy trình đã làm ở step0.md.
+**Bước tiếp theo:** chạy `python src/run_all_asr.py` (code đã viết, xem hướng dẫn trong chat) để lấy WER/CER/RTF thật; cân nhắc thử `qai-hub` profiling cho PhoWhisper theo §11 nếu cần số Snapdragon thật cho §4.4.
