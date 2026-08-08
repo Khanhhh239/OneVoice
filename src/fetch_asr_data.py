@@ -32,11 +32,12 @@ FLEURS_CONFIG = {
 
 
 def fetch_lang(lang, config, n):
-    print(f"[fetch_asr_data] {lang}: streaming google/fleurs ({config}) test split...")
-    ds = load_dataset("google/fleurs", config, split="test",
-                       streaming=True, trust_remote_code=True)
+    print(f"[fetch_asr_data] {lang}: loading google/fleurs ({config}), "
+          f"first {n} test examples -- first run downloads that language's "
+          f"shard, can take a few minutes, HF's own progress bars will show.")
+    ds = load_dataset("google/fleurs", config, split=f"test[:{n}]")
     items = []
-    for i, ex in enumerate(ds.take(n)):
+    for i, ex in enumerate(ds):
         audio = ex["audio"]
         wav = np.asarray(audio["array"], dtype=np.float32)
         sr = audio["sampling_rate"]
