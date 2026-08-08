@@ -22,14 +22,22 @@ def _stub_broken_torchaudio():
     import, needed for Qwen3-ASR). Stub it out before that first real import
     happens; once a module is in sys.modules, every later `import torchaudio`
     anywhere else in the process just reuses this harmless stub instead of
-    re-running torchaudio's real (crashing) init code."""
+    re-running torchaudio's real (crashing) init code.
+
+    The stub needs a real __spec__: transformers' own availability check
+    (`importlib.util.find_spec("torchaudio")`, used by is_torchaudio_available)
+    reads __spec__ off whatever's already sitting in sys.modules, and raises
+    ValueError if that attribute is missing or None -- which a bare
+    types.ModuleType(...) leaves it as by default."""
     try:
         import torchaudio  # noqa: F401
     except Exception:
         import sys
         import types
+        import importlib.machinery
         stub = types.ModuleType("torchaudio")
         stub.__version__ = "0.0.0-stub"
+        stub.__spec__ = importlib.machinery.ModuleSpec("torchaudio", loader=None)
         sys.modules["torchaudio"] = stub
 
 
