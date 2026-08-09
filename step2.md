@@ -119,5 +119,37 @@ Chưa code — đây là bước tiếp theo, theo đúng mẫu đã làm ở St
 
 ---
 
-**Document version:** 2026-08-08 (research-based, full-text đọc 5/7 paper, chưa code-test)
-**Bước tiếp theo:** Viết code test tương tự step0/step1 — fine-tune thật, đo BLEU/COMET/AL thật, xác nhận (hoặc bác bỏ) các con số dự đoán ở trên bằng dữ liệu thực.
+### 8. Code-test thật: NLLB-600M vs Qwen3-0.6B vs Qwen3-1.7B trên FLORES-200
+
+**Lý do test lại từ đầu**: NLLB-600M ban đầu chỉ là thừa kế từ kế hoạch gốc, CHƯA từng được đo thật hay so sánh với ứng viên khác. Phát hiện quan trọng: **NLLB không có trên Qualcomm AI Hub** (đề bài khuyến khích dùng model có sẵn ở đó), trong khi **Qwen3-0.6B và Qwen3-1.7B có sẵn, đã quantize cho Snapdragon**. Test để xem việc "có sẵn trên AI Hub" có đáng đánh đổi lấy chất lượng không.
+
+**Dữ liệu**: FLORES-200 devtest (tải trực tiếp từ `dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz` -- các nguồn HF Datasets khác đều gated hoặc dùng loading script không còn được hỗ trợ), 30 câu song song đủ Vi/En/Zh/Ko, cả 6 chiều dịch.
+
+**Kết quả BLEU (sentence-level sacreBLEU, tokenizer "zh" cho tiếng Trung):**
+
+| Chiều | NLLB-600M | Qwen3-0.6B | Qwen3-1.7B |
+|---|---|---|---|
+| vi→en | **33.81** | 18.44 | 26.85 |
+| en→vi | **29.67** | 16.19 | 26.01 |
+| vi→zh | 20.45 | 17.74 | **23.41** |
+| zh→vi | **21.07** | 10.39 | 17.58 |
+| vi→ko | **8.05** | 3.18 | 5.75 |
+| ko→vi | **18.60** | 5.63 | 13.97 |
+| Tốc độ (giây/câu) | **0.4-0.9** | 2.7-6.9 | 1.6-10.1 |
+
+**NLLB-600M thắng 5/6 chiều** (chỉ thua vi→zh trước Qwen3-1.7B: 20.45 vs 23.41) **và thắng tốc độ ở MỌI chiều** (nhanh hơn Qwen3 3-15 lần tuỳ chiều). Qwen3-0.6B (đúng cỡ NLLB) thua NLLB rất xa ở mọi chiều -- lợi thế "có sẵn trên AI Hub, cùng cỡ" không bù được khoảng cách chất lượng.
+
+**Kết luận cho câu hỏi kiến trúc**: dù NLLB không có trên AI Hub (phải tự quantize/convert ONNX→QNN), số liệu thật cho thấy **vẫn nên giữ NLLB-600M** làm nền MT -- lợi thế AI Hub (đã tối ưu sẵn) không đáng để đánh đổi lấy chất lượng kém hơn nhiều lần và tốc độ chậm hơn 3-15 lần của Qwen3. Việc tự quantize NLLB tốn công hơn nhưng là lựa chọn đúng.
+
+**Phát hiện phụ quan trọng -- vi→ko thấp bất thường (8.05) so với ko→vi (18.60), điều tra bằng cách soi mẫu dịch thật:**
+
+Kiểm tra 5 câu vi→ko thật của NLLB cho thấy **phần lớn ngữ nghĩa đúng** (trừ 1 lỗi thật: "tuần lộc" (reindeer) bị dịch nhầm thành "오징어" (mực/squid) ở câu đầu). BLEU thấp chủ yếu do: **tiếng Hàn là ngôn ngữ chắp dính (agglutinative)** -- cùng một nghĩa có thể chia đuôi từ/trợ từ khác nhau (VD REF "않았습니다" quá khứ vs HYP "않습니다" hiện tại, đều đúng ngữ pháp), khiến BLEU tính trùng khớp n-gram bề mặt bị đánh giá thấp giả tạo dù nghĩa đúng. Đây là **hạn chế cố hữu của BLEU với ngôn ngữ chắp dính khi nó là ngôn ngữ ĐÍCH** -- giải thích đúng khớp với việc ko→vi KHÔNG bị ảnh hưởng (đích là tiếng Việt, không chắp dính). Khác với bug CER khoảng trắng tiếng Trung ở Step 1 (có thể sửa bằng chuẩn hoá text), lỗi này không có cách sửa đơn giản -- cần metric ngữ nghĩa (COMET/xCOMET) thay vì BLEU bề mặt để đánh giá công bằng các cặp có tiếng Hàn làm đích. Ghi nhận: BLEU vi→ko/ko→vi tuyệt đối vẫn có thể phản ánh phần nào NLLB yếu hơn thật ở hướng này (ít dữ liệu train ko→ hơn →ko), nhưng khoảng cách 8.05 vs 18.60 phần lớn là do đặc tính metric, không phải NLLB "kém 2 lần" như con số thô gợi ý.
+
+**Bug môi trường gặp khi code-test (đáng nhớ)**:
+- `Muennighoff/flores200` (HF Datasets) dùng loading script không còn được `datasets` hỗ trợ; `facebook/flores` và `openlanguagedata/flores_plus` đều gated (cần đăng nhập HF). Giải pháp: tải thẳng tarball chính thức của Meta (`dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz`), không qua thư viện `datasets`.
+- Script `test_mt_qwen3.py` chạy nền (`run_in_background`) liên tục có vẻ "treo" (>30 phút không tiến triển) dù GPU vẫn bận thật -- nguyên nhân: dùng nhầm tham số `torch_dtype` đã deprecated (transformers bản dev `5.15.0.dev0`) thay vì `dtype`, khiến load chậm hơn nhiều so với kỳ vọng. Sửa xong + thêm progress log theo từng câu để tránh mù thông tin trong các lần chạy nền dài.
+
+---
+
+**Document version:** 2026-08-09 (code-tested: NLLB-600M vs Qwen3-0.6B/1.7B trên FLORES-200 thật, 6 chiều)
+**Bước tiếp theo:** Chốt NLLB-600M làm baseline MT chính thức; xác nhận kế hoạch tự quantize ONNX→QNN (vì không có sẵn trên AI Hub); cân nhắc đo lại vi↔ko bằng COMET/xCOMET thay vì chỉ BLEU trước khi kết luận NLLB "yếu" ở cặp Hàn.

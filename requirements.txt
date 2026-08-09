@@ -14,6 +14,7 @@ funasr>=1.1
 sherpa-onnx>=1.10       # test_asr_zipformer.py
 sentencepiece>=0.2      # test_asr_zipformer.py, only used if repo lacks tokens.txt
 huggingface-hub>=0.24   # test_asr_zipformer.py (snapshot_download)
+sacrebleu>=2.4          # test_mt_*.py (BLEU scoring)
 # test_asr_qwen.py needs transformers>=5.13.0 specifically -- that's a big
 # jump from the >=4.40 pinned above and may conflict with funasr's own
 # transformers pin. Install it in isolation (venv/conda env) if `pip install

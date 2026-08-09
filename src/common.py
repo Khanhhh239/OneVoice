@@ -120,6 +120,16 @@ def normalize_text(s):
     return s
 
 
+def bleu(hyp, ref, tgt_lang):
+    """Sentence-level sacreBLEU, tokenized appropriately for the target
+    language ("zh" tokenizer for Chinese -- it has no whitespace word
+    boundaries, so the default 13a tokenizer would undercount matches;
+    13a is fine for Vietnamese/English/Korean, which are whitespace-delimited)."""
+    import sacrebleu
+    tokenize = "zh" if tgt_lang == "zh" else "13a"
+    return sacrebleu.sentence_bleu(hyp, [ref], tokenize=tokenize).score
+
+
 def normalize_text_for_cer(s):
     """normalize_text() then strip ALL whitespace, for character-level (CER)
     scoring only. Some CJK reference transcripts (FLEURS zh, confirmed by
