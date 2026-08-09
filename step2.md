@@ -15,7 +15,7 @@
 | Code-switch handling | Copy-Through augmentation (identity pairs in fine-tune data) | — | — | Cheaper than full LLM-based augmentation pipeline |
 | Synthetic-data teacher (offline only, dev machine) | Hunyuan-MT-7B (WMT2025 #1 in 30/31 pairs) | 7B, never deployed to device | — | Generates higher-quality synthetic Vi↔Zh/Ko pairs than raw back-translation |
 
-**⚠️ Note for Hardware section (§5):** NLLB-600M is **not** listed on Qualcomm AI Hub (unlike Qwen3-0.6B/1.7B, which are pre-quantized for Snapdragon) — this was tested head-to-head (see Part B §1) and NLLB still wins decisively on quality and speed. Plan: convert ONNX→QNN ourselves; flag this as a known extra engineering task in the timeline (§7).
+**⚠️ Note for Hardware section (§5):** NLLB-600M is **not** listed on Qualcomm AI Hub (unlike Qwen3-0.6B/1.7B, which are pre-quantized for Snapdragon) — this was tested head-to-head (see Part B §1) and NLLB still wins decisively on quality and speed. Plan: convert ONNX→QNN ourselves; flag this as a known extra engineering task in the timeline (§7). **Also note: all BLEU/speed numbers above were measured on the dev machine's NVIDIA GPU (CUDA), not on real Snapdragon hardware** — same caveat applies to step1.md's ASR numbers. Real on-device latency is still unmeasured; plan to use Qualcomm AI Hub's free remote-profiling service (`qai-hub` package) once the ONNX→QNN conversion is done.
 
 **Quality target:** streaming BLEU within ~2–3 points of non-streaming baseline (reference gap from AliBaStr-MT's own measurement: 43.89 vs 45.56 BLEU on a comparable ES pair).
 

@@ -9,7 +9,7 @@
 | Module | Model / Framework | Size (est.) | Latency Target | Key Technique |
 |---|---|---|---|---|
 | ASR — Vietnamese | Zipformer-30M-RNNT-6000h ([HF: hynt](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h), sherpa-onnx runtime) | ~30M params (~30–60MB int8/fp16) | RTF 0.017–0.05 → ≈50–150ms per 3s utterance | Streaming RNN-T (native incremental joiner, no bolt-on streaming policy needed); trained on 6,000h incl. naturally-noisy web-scraped Vietnamese (GigaSpeech2-Vi, VietSpeech) |
-| ASR — English / Mandarin / Korean | SenseVoice-Small (FunASR, listed on Qualcomm AI Hub) | ~250MB (int8-quantizable) | RTF 0.009–0.017 → ≈30–50ms per 3s utterance | Non-autoregressive single-pass decode; built-in ITN via `rich_transcription_postprocess`; also gives language-ID/emotion tags free |
+| ASR — English / Mandarin / Korean | SenseVoice-Small (FunASR) | ~250MB (int8-quantizable) | RTF 0.009–0.017 → ≈30–50ms per 3s utterance | Non-autoregressive single-pass decode; built-in ITN via `rich_transcription_postprocess`; also gives language-ID/emotion tags free |
 
 **Streaming integration:** RNN-T (Zipformer) streams natively frame-by-frame via its joiner — no separate streaming-policy algorithm needed. SenseVoice is non-autoregressive so "streaming" means cheap full-prefix re-decode on each new audio chunk (RTF under 0.02 means re-decoding the whole buffer every ~300ms is still comfortably real-time). Both run 100% on-device, zero network calls — satisfies the brief's hard "internet dependency: zero" constraint.
 
@@ -96,6 +96,8 @@ Nếu sau này cần fine-tune thêm Zipformer cho phương ngữ 3 miền (rủ
 |---|---|
 | License Zipformer (CC-BY-NC-ND-4.0) bị ban tổ chức từ chối | Qwen3-ASR-0.6B cho tiếng Việt (WER tương đương, chấp nhận RTF chậm hơn 3–8 lần) — KHÔNG dùng Moonshine (đã loại rõ ràng ở mọi tiêu chí) |
 | Flicker rate cao khi SenseVoice re-decode mỗi 300ms | Chưa đo — cần benchmark khi tích hợp thực với Step 2, thêm hysteresis nhỏ nếu cần |
+
+**⚠️ Khoảng trống quan trọng chưa xử lý — phần cứng thật:** toàn bộ số RTF ở §2/§3 đo trên **GPU NVIDIA của máy dev (CUDA)**, dùng để so sánh công bằng giữa các candidate — KHÔNG PHẢI đo trên Snapdragon/NPU thật. Cả Zipformer lẫn SenseVoice-Small đều **chưa xác nhận có trên Qualcomm AI Hub** (đã search riêng SenseVoice, không tìm thấy bằng chứng — claim trước đó chỉ dựa vào việc template dùng nó làm ví dụ, không phải xác nhận thật). Trước khi chốt số liệu latency cho phần Hardware (§5 Technical Proposal), cần: (1) tự convert cả 2 model sang ONNX→QNN, (2) dùng dịch vụ remote-profile miễn phí của Qualcomm AI Hub (`qai-hub` Python package) để đo RTF thật trên chip Snapdragon/QCS6490 — chưa làm bước này.
 
 ---
 
