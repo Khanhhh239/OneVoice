@@ -324,5 +324,39 @@ Khi được hỏi thẳng "lựa chọn này đã đảm bảo quality/latency 
 
 ---
 
-**Document version:** 2026-08-08 (code-tested: PhoWhisper/Zipformer/Moonshine đều có số thật cho Vi; SenseVoice và Qwen3-ASR đầy đủ vẫn còn thiếu)
-**Bước tiếp theo:** (1) Chạy `test_asr_multi.py` (SenseVoice) để có baseline En/Zh/Ko thật; (2) cài torch CUDA vào `venv_qwen` nếu muốn số RTF Qwen công bằng; (3) xác nhận license Zipformer-30M với ban tổ chức; (4) chốt Part A.
+### 15. SenseVoice + Qwen3-ASR chạy xong -- bức tranh đầy đủ cả 5 model
+
+**2 bug môi trường mới tìm ra khi chạy SenseVoice thật** (không phải lỗi model):
+1. `trust_remote_code=True` tôi thêm phòng thủ trước đó lại LÀ nguyên nhân crash -- funasr cố tải `model.py` từ xa không khớp layout repo, làm `frontend_class` thành `None`. Model card chính thức không dùng cờ này -- bỏ đi.
+2. Sau khi bỏ cờ đó vẫn crash y hệt -- truy tới tận gốc: `WavFrontend` cần `torchaudio.compliance.kaldi`, mà `torchaudio 2.11.0+cu128` lệch bản CUDA với `torch 2.6.0+cu124` đang cài -- đúng lỗi ABI mismatch đã gặp nhiều lần trước đây, nhưng lần này funasr NUỐT lỗi import âm thầm thay vì báo rõ. Cài lại `torchaudio==2.6.0+cu124` khớp đúng bản torch -- fix tận gốc, không phải vá vòng ngoài nữa.
+3. Thêm bước hậu xử lý `rich_transcription_postprocess()` -- output thô của SenseVoice có tag như `<|en|><|NEUTRAL|><|Speech|><|withitn|>` lẫn vào text, nếu không lọc sẽ phá điểm WER/CER.
+
+**Qwen3-ASR**: venv cũ thiếu CUDA + thiếu `accelerate` -- tạo conda env riêng (`qwen_asr`) với torch CUDA đúng bản, cài đủ dependency, chạy thành công đủ 120 dòng (4 ngôn ngữ × 6 điều kiện).
+
+**Bảng WER/CER trung bình sạch + RTF -- cả 5 model:**
+
+| Ngôn ngữ | PhoWhisper | Zipformer-30M | Moonshine | SenseVoice | Qwen3-ASR-0.6B |
+|---|---|---|---|---|---|
+| Việt (WER, sạch) | 5.51% | **5.35%** | 7.7% | — | 5.9% |
+| Việt (WER, 0dB) | 8.01% | **4.10%** | 16.4% | — | 6.6% |
+| Anh (WER, sạch) | — | — | 9.6% | 6.8% | **4.9%** |
+| Anh (WER, 0dB) | — | — | 25.1% | 11.5% | **7.0%** |
+| Trung (CER, sạch) | — | — | 16.2% | **2.3%** | 9.1% |
+| Trung (CER, 0dB) | — | — | 78.6%* | 11.8% | **10.2%** |
+| Hàn (CER, sạch) | — | — | 8.1% | **4.4%** (~= Qwen) | **4.4%** |
+| Hàn (CER, 0dB) | — | — | 37.0% | 20.9% | **16.1%** |
+| RTF trung bình | ~0.06-0.18 | ~0.02-0.05 | ~0.05-0.3 | **0.009-0.017** | 0.10-0.17 |
+
+**Đọc kết quả:**
+- **Vi**: Zipformer vẫn thắng rõ nhất (đã biết từ §13). Qwen3-ASR xấp xỉ PhoWhisper -- không đủ tốt để thay Zipformer.
+- **Anh**: bất ngờ -- **Qwen3-ASR thắng cả SenseVoice** (4.9% vs 6.8% sạch, 7.0% vs 11.5% ở 0dB).
+- **Trung**: SenseVoice thắng rõ ở điều kiện sạch (2.3% vs 9.1%) nhưng ở 0dB gần như hoà (10.2% vs 11.8%).
+- **Hàn**: SenseVoice và Qwen3-ASR gần như ngang nhau, cả 2 đều hơn hẳn Moonshine.
+- **RTF: SenseVoice nhanh hơn Qwen3-ASR khoảng 10 lần** (0.01-0.02 vs 0.10-0.17) -- đây là điểm quyết định. Qwen3-ASR tuy chất lượng cạnh tranh và có lợi thế kiến trúc "1 model duy nhất thay cho cả PhoWhisper/Zipformer lẫn SenseVoice", nhưng chậm hơn 10 lần thì không phù hợp bài toán real-time streaming trên edge.
+
+**Kết luận cuối cho Part A**: giữ kiến trúc split -- **Zipformer-30M (Vi) + SenseVoice-Small (En/Zh/Ko)** -- cả về chất lượng lẫn tốc độ đều thắng phương án gộp 1-model Qwen3-ASR. Không cần cân nhắc Qwen3-ASR thêm nữa trừ khi license Zipformer bị từ chối VÀ cần một phương án dự phòng nhanh gọn hơn Moonshine.
+
+---
+
+**Document version:** 2026-08-09 (code-tested đầy đủ cả 5 model: PhoWhisper, Zipformer, Moonshine, SenseVoice, Qwen3-ASR)
+**Bước tiếp theo:** Xác nhận license Zipformer-30M (CC-BY-NC-ND) với ban tổ chức OneVoice -- đây là rào cản DUY NHẤT còn lại trước khi chốt kiến trúc Part A.
