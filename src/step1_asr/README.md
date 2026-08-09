@@ -29,3 +29,25 @@ python run_all_asr.py
 ```
 
 Results -> `outputs/asr_*_results.csv` (WER/CER/RTF per language, per SNR level).
+
+## Unified ASR Pipeline (Cải tiến mới)
+
+Dựa trên kết luận giữ kiến trúc **Split** (Zipformer cho Tiếng Việt + SenseVoice cho Anh/Trung/Hàn), mã nguồn đã được tái cấu trúc thành một Pipeline thống nhất duy nhất để dễ dàng tích hợp vào Step 5 (End-to-end pipeline) sau này.
+
+- `unified_asr.py`: Đóng gói bộ 2 mô hình (Zipformer và SenseVoice) vào class `UnifiedASRPipeline`. Class này sẽ nhận input `(audio_path, lang)` và tự động định tuyến (route) sang model phù hợp mà không cần gọi script rời rạc.
+- `test_unified_asr.py`: Script kiểm thử toàn diện đánh giá trực tiếp class `UnifiedASRPipeline` trên toàn bộ tập dữ liệu (kể cả file nguyên bản và file đã mix nhiễu SNR khó). Tự động tính toán WER/CER và RTF (độ trễ) cho 4 ngôn ngữ trong cùng một lần chạy.
+
+### Hướng dẫn chạy Unified Test
+
+```bash
+cd src/step1_asr
+
+# Đảm bảo đã tải và chuẩn bị dữ liệu (bao gồm cả dữ liệu mix nhiễu)
+python fetch_asr_data.py
+python mix_asr_noise.py
+
+# Chạy test đánh giá Pipeline thống nhất
+python test_unified_asr.py
+```
+
+Kết quả tổng hợp sẽ được lưu tại `outputs/asr_unified_results.csv`. Tốc độ trung bình (RTF) của pipeline thống nhất đạt khoảng `~0.03` trên máy tính cá nhân.

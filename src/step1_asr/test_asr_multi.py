@@ -61,13 +61,11 @@ def load_sensevoice(device_str):
     from funasr import AutoModel
     vad_kwargs = {"max_single_segment_time": 30000}
     try:
-        return AutoModel(model=MODEL_ID_HF, vad_model="fsmn-vad",
-                          vad_kwargs=vad_kwargs, hub="hf", device=device_str)
+        return AutoModel(model=MODEL_ID_HF, hub="hf", device=device_str)
     except TypeError:
         print("[test_asr_multi] funasr version doesn't accept hub='hf' -- "
               f"falling back to ModelScope id '{MODEL_ID_MODELSCOPE}'")
-        return AutoModel(model=MODEL_ID_MODELSCOPE, vad_model="fsmn-vad",
-                          vad_kwargs=vad_kwargs, device=device_str)
+        return AutoModel(model=MODEL_ID_MODELSCOPE, device=device_str)
 
 
 def run_asr(model, path, lang):

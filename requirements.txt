@@ -3,9 +3,9 @@ soundfile>=0.12
 librosa>=0.10
 numpy>=1.24
 einops>=0.7
-pesq>=0.0.4
-pystoi>=0.3
-pyroomacoustics>=0.7
+# pesq>=0.0.4
+# pystoi>=0.3
+# pyroomacoustics>=0.7
 pandas>=2.0
 transformers>=4.40
 datasets>=2.16
@@ -23,12 +23,12 @@ sacrebleu>=2.4          # test_mt_*.py (BLEU scoring)
 # --- Step 3 (TTS) ---
 supertonic                 # test_tts_supertonic.py
 piper-tts                  # test_tts_piper.py (also needs `python -m piper.download_voices <voice>` first)
-vieneu                     # test_tts_vieneu.py -- mode="standard" needs neucodec + a compatible torchao
-neucodec                   # test_tts_vieneu.py codec backend
-torchao==0.9.0              # vieneu's neucodec import chain breaks on torchao>=0.10 unless torch>=2.7 (register_constant API) -- pin to 0.9.0 for torch 2.6.x
-llama-cpp-python            # vieneu's default "turbo" mode; on Windows install from
-                             # https://abetlen.github.io/llama-cpp-python/whl/cpu -- pip's normal
-                             # index has no working prebuilt wheel here and source builds need a C++ toolchain
+# vieneu                     # test_tts_vieneu.py -- mode="standard" needs neucodec + a compatible torchao
+# neucodec                   # test_tts_vieneu.py codec backend
+# torchao==0.9.0              # vieneu's neucodec import chain breaks on torchao>=0.10 unless torch>=2.7 (register_constant API) -- pin to 0.9.0 for torch 2.6.x
+# llama-cpp-python            # vieneu's default "turbo" mode; on Windows install from
+#                              # https://abetlen.github.io/llama-cpp-python/whl/cpu -- pip's normal
+#                              # index has no working prebuilt wheel here and source builds need a C++ toolchain
 # MeloTTS (test_tts_melotts.py) is not on PyPI -- clone https://github.com/myshell-ai/MeloTTS
 # and `pip install -e .`; needs Python<=3.11 (tokenizers has no 3.13 wheel and needs Rust to build from source)
 
