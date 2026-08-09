@@ -5,14 +5,16 @@ several SNR levels. Writes data/mixed/<lang>/*.wav + manifest.json (needed
 by test_denoise.py / test_beamform.py for clean-reference PESQ/STOI).
 """
 import os
+import sys
 import json
 import random
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import list_audio_files, load_wav, save_wav
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CLEAN_DIR = os.path.join(ROOT, "data", "clean")
 NOISE_DIR = os.path.join(ROOT, "data", "noise")
 MIXED_DIR = os.path.join(ROOT, "data", "mixed")

@@ -11,6 +11,7 @@ HF repo wasn't 100% confirmed ahead of time, so this script tries a couple
 of fallbacks and prints clearly which one it used.
 """
 import os
+import sys
 import csv
 import json
 import time
@@ -18,9 +19,10 @@ import glob
 
 import jiwer
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, load_wav, rtf, normalize_text
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ASR_DIR = os.path.join(ROOT, "data", "asr")
 ASR_MIXED_DIR = os.path.join(ROOT, "data", "asr_mixed")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "asr_zipformer_results.csv")

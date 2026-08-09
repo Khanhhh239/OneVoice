@@ -12,6 +12,7 @@ never needed transcripts) -- writes to data/asr/<lang>/*.wav + manifest.json.
 """
 import io
 import os
+import sys
 import json
 
 import librosa
@@ -19,9 +20,10 @@ import numpy as np
 import soundfile as sf
 from datasets import load_dataset, Audio
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, save_wav
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(ROOT, "data", "asr")
 N_PER_LANG = 5
 

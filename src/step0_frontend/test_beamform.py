@@ -8,6 +8,7 @@ Compares: 1-mic baseline vs Delay-and-Sum vs MVDR, via PESQ/STOI vs clean.
 Maps to Technical Proposal SS4.2 / SS4.4 / SS5.2 (mic array row).
 """
 import os
+import sys
 import csv
 import time
 
@@ -17,10 +18,11 @@ import pyroomacoustics as pra
 from pesq import pesq
 from pystoi import stoi
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, list_audio_files, load_wav, save_wav, rtf
 from mix_noise import get_noise_segment, NOISE_DIR
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CLEAN_DIR = os.path.join(ROOT, "data", "clean")
 OUT_DIR = os.path.join(ROOT, "outputs", "beamform")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "beamform_results.csv")

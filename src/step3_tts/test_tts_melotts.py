@@ -5,15 +5,17 @@ test_tts_supertonic.py for a fair comparison. Measures RTF and saves WAVs.
 Maps to Technical Proposal SS4.2/SS4.3 (TTS row) for Zh (+En reference).
 """
 import os
+import sys
 import csv
 import json
 import time
 
 import soundfile as sf
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import _ensure_utf8_stdout, get_device, rtf  # noqa: F401
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MANIFEST = os.path.join(ROOT, "data", "mt", "manifest.json")
 OUT_AUDIO_DIR = os.path.join(ROOT, "outputs", "tts_melotts")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "tts_melotts_results.csv")

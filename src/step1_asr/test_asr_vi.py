@@ -6,6 +6,7 @@ Measures WER (jiwer, on normalized text) and RTF on clean + noisy
 (ASR row) for Vietnamese.
 """
 import os
+import sys
 import csv
 import json
 import time
@@ -13,9 +14,10 @@ import time
 import torch
 import jiwer
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, load_wav, rtf, normalize_text
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ASR_DIR = os.path.join(ROOT, "data", "asr")
 ASR_MIXED_DIR = os.path.join(ROOT, "data", "asr_mixed")
 OUT_DIR = os.path.join(ROOT, "outputs", "asr_vi")

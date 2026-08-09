@@ -15,9 +15,10 @@ import numpy as np
 from pesq import pesq
 from pystoi import stoi
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, load_wav, save_wav, rtf
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "third_party_gtcrn"))
 from gtcrn import GTCRN  # noqa: E402  (their official model definition, MIT licensed)
 

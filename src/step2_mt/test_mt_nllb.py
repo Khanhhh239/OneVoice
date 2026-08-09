@@ -6,15 +6,17 @@ using the FLORES-200 sample from fetch_mt_data.py.
 Maps to Technical Proposal SS4.2/SS4.3 (MT row).
 """
 import os
+import sys
 import csv
 import json
 import time
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import get_device, bleu
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MANIFEST = os.path.join(ROOT, "data", "mt", "manifest.json")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "mt_nllb_results.csv")
 

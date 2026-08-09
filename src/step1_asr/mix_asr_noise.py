@@ -5,12 +5,14 @@ data/noise/ and the mixing logic from mix_noise.py (Step 0) instead of
 duplicating it.
 """
 import os
+import sys
 import json
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import list_audio_files, load_wav, save_wav
 from mix_noise import get_noise_segment, mix_at_snr, SNR_DB_LIST
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NOISE_DIR = os.path.join(ROOT, "data", "noise")
 ASR_DIR = os.path.join(ROOT, "data", "asr")
 ASR_MIXED_DIR = os.path.join(ROOT, "data", "asr_mixed")

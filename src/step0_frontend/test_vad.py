@@ -6,11 +6,13 @@ can listen and manually grade cut accuracy ("nghe/cham tay").
 Maps to Technical Proposal SS4.2 (VAD row) / SS4.4 (Robustness).
 """
 import os
+import sys
 import csv
 import time
 
 import torch
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, list_audio_files, load_wav, save_wav, rtf
 
 
@@ -33,7 +35,7 @@ def _ensure_torchaudio_importable():
               f"using a stub so Silero VAD can still load "
               f"(not needed for this test path).")
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MIXED_DIR = os.path.join(ROOT, "data", "mixed")
 CLEAN_DIR = os.path.join(ROOT, "data", "clean")
 OUT_DIR = os.path.join(ROOT, "outputs", "vad")

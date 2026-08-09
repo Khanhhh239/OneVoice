@@ -9,14 +9,16 @@ synthesized speech is clear enough for a real ASR model to transcribe back
 correctly.
 """
 import os
+import sys
 import csv
 import glob
 
 import jiwer
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, load_wav, normalize_text, normalize_text_for_cer
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RESULTS_CSV = os.path.join(ROOT, "outputs", "tts_quality_results.csv")
 
 ZIPFORMER_REPO = "hynt/Zipformer-30M-RNNT-6000h"

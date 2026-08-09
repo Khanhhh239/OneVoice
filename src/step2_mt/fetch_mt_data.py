@@ -12,14 +12,16 @@ line number = same source sentence, different language).
 Maps to Technical Proposal SS4.2/SS4.3 (MT row) for Vi<->En/Zh/Ko.
 """
 import os
+import sys
 import json
 import random
 import tarfile
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import _ensure_utf8_stdout  # noqa: F401 -- side effect import
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(ROOT, "data", "mt")
 RAW_DIR = os.path.join(OUT_DIR, "raw")
 MANIFEST = os.path.join(OUT_DIR, "manifest.json")

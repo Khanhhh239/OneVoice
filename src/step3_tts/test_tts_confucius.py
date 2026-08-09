@@ -21,9 +21,10 @@ import time
 import torch
 import torchaudio
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import _ensure_utf8_stdout, rtf  # noqa: F401
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MANIFEST = os.path.join(ROOT, "data", "mt", "manifest.json")
 OUT_AUDIO_DIR = os.path.join(ROOT, "outputs", "tts_confucius")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "tts_confucius_results.csv")

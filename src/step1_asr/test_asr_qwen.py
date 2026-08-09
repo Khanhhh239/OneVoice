@@ -20,15 +20,17 @@ changing the input format, hence dropped entirely rather than kept as a
 "try first" path.
 """
 import os
+import sys
 import csv
 import json
 import time
 
 import jiwer
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
 from common import SR, get_device, load_wav, rtf, normalize_text, normalize_text_for_cer
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ASR_DIR = os.path.join(ROOT, "data", "asr")
 ASR_MIXED_DIR = os.path.join(ROOT, "data", "asr_mixed")
 RESULTS_CSV = os.path.join(ROOT, "outputs", "asr_qwen_results.csv")
