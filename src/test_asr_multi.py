@@ -49,24 +49,38 @@ def load_items():
 
 
 def load_sensevoice(device_str):
+    # NOTE: no trust_remote_code -- SenseVoice is natively registered in
+    # funasr (same team/ecosystem), and the official model card's example
+    # does not pass this flag. Passing it anyway made funasr try to load a
+    # remote model.py that failed ("No module named 'model'"), which left
+    # frontend_class as None and crashed downstream with a confusing
+    # TypeError. vad_model matches the documented usage (segments long
+    # audio before ASR; harmless for our short single-utterance clips).
     from funasr import AutoModel
+    vad_kwargs = {"max_single_segment_time": 30000}
     try:
-        return AutoModel(model=MODEL_ID_HF, trust_remote_code=True,
-                          hub="hf", device=device_str)
+        return AutoModel(model=MODEL_ID_HF, vad_model="fsmn-vad",
+                          vad_kwargs=vad_kwargs, hub="hf", device=device_str)
     except TypeError:
         print("[test_asr_multi] funasr version doesn't accept hub='hf' -- "
               f"falling back to ModelScope id '{MODEL_ID_MODELSCOPE}'")
-        return AutoModel(model=MODEL_ID_MODELSCOPE, trust_remote_code=True,
-                          device=device_str)
+        return AutoModel(model=MODEL_ID_MODELSCOPE, vad_model="fsmn-vad",
+                          vad_kwargs=vad_kwargs, device=device_str)
 
 
 def run_asr(model, path, lang):
+    from funasr.utils.postprocess_utils import rich_transcription_postprocess
     try:
-        result = model.generate(input=path, language=lang, use_itn=True)
+        result = model.generate(input=path, cache={}, language=lang,
+                                 use_itn=True, batch_size_s=60,
+                                 merge_vad=True, merge_length_s=15)
     except TypeError:
         result = model.generate(input=path, language=lang)
     if isinstance(result, list) and result and "text" in result[0]:
-        return result[0]["text"].strip()
+        # Raw output is tagged, e.g. "<|en|><|NEUTRAL|><|Speech|><|withitn|>
+        # actual text" -- rich_transcription_postprocess strips these before
+        # WER/CER scoring; without it every tag would count as spurious words.
+        return rich_transcription_postprocess(result[0]["text"]).strip()
     return str(result).strip()
 
 
