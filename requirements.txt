@@ -31,3 +31,13 @@ llama-cpp-python            # vieneu's default "turbo" mode; on Windows install 
                              # index has no working prebuilt wheel here and source builds need a C++ toolchain
 # MeloTTS (test_tts_melotts.py) is not on PyPI -- clone https://github.com/myshell-ai/MeloTTS
 # and `pip install -e .`; needs Python<=3.11 (tokenizers has no 3.13 wheel and needs Rust to build from source)
+
+# --- Step 4 (Quantization) ---
+ctranslate2                 # verify_nllb_int8.py, pipeline_s2s.py -- NLLB int8 MT runtime
+funasr_onnx                 # verify_sensevoice_int8.py -- SenseVoice-Small ONNX int8 inference
+onnxruntime                 # quantize_supertonic.py (onnxruntime.quantization.quantize_dynamic)
+
+# --- Step 5 (End-to-end pipeline) ---
+# pipeline_s2s.py chains Step 1-4's picks; no new deps beyond the above --
+# reuses funasr (fp32 SenseVoice on CPU/GPU), sherpa-onnx (Zipformer),
+# ctranslate2 (NLLB), piper-tts/supertonic/melotts (TTS).

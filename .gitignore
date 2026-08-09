@@ -12,6 +12,7 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 third_party_zipformer/
-src/*.onnx
-src/*.onnx.json
+src/**/*.onnx
+src/**/*.onnx.json
+venv_pipeline/
 =*.*.*

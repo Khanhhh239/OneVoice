@@ -16,15 +16,17 @@ numbers live in each module's `stepN.md`.
 | 1 | ASR (Speech Recognition) | Zipformer-30M (Vi) + SenseVoice-Small (En/Zh/Ko) | [step1.md](step1.md) | [src/step1_asr/](src/step1_asr/) |
 | 2 | MT (Machine Translation) | NLLB-200-distilled-600M | [step2.md](step2.md) | [src/step2_mt/](src/step2_mt/) |
 | 3 | TTS (Speech Synthesis) | Piper (Vi) + Supertonic (Ko/En) + MeloTTS-ZH (Zh) | [step3.md](step3.md) | [src/step3_tts/](src/step3_tts/) |
-| 4 | Hardware & Quantization | Rubik Pi 3 (QCS6490), fallback Snapdragon 8 Elite phone | [step4.md](step4.md) | — (planning doc, no code yet) |
+| 4 | Hardware & Quantization | Rubik Pi 3 (QCS6490), fallback Snapdragon 8 Elite phone | [step4.md](step4.md) | [src/step1_asr/verify_sensevoice_int8.py](src/step1_asr/verify_sensevoice_int8.py), [src/step2_mt/verify_nllb_int8.py](src/step2_mt/verify_nllb_int8.py), [src/step3_tts/quantize_supertonic.py](src/step3_tts/quantize_supertonic.py) |
+| 5 | End-to-end pipeline (ASR→MT→TTS chained) | Same picks as Step 1-4, CPU/GPU comparison | — (no doc yet, see script docstrings) | [src/step5_pipeline/](src/step5_pipeline/) |
 
 **Known open gap (flagged in every stepN.md):** all RTF numbers above except MeloTTS-ZH are measured on a
 dev-machine GPU/CPU, not real Snapdragon hardware. MeloTTS-ZH is the only module profiled on an actual
 Snapdragon 8 Elite Gen 5 via Qualcomm AI Hub. Next step for every other module: `qai-hub` remote-profiling.
 
-**Total model footprint (real, on-disk, measured in step4.md):** ~3.86GB unquantized today → ~1.3GB target
-after quantizing SenseVoice-Small and NLLB-600M (the two pieces that were never actually quantized despite
-earlier size estimates assuming they had been).
+**Total model footprint (real, on-disk, measured + quantized in step4.md):** 3.86GB unquantized → **~1.38GB
+achieved** after quantizing NLLB-600M (CTranslate2 int8, verified safe via BLEU) and Supertonic (int8 with
+its vocoder kept fp32 — full int8 broke the model, root-caused via bisection, see step4.md §3a).
+SenseVoice-Small int8 works but costs real zh/ko quality (step4.md §3b) — not yet a final call.
 
 ## Repo layout
 
@@ -36,6 +38,7 @@ src/
   step1_asr/                 Step 1 code + README
   step2_mt/                  Step 2 code + README
   step3_tts/                  Step 3 code + README
+  step5_pipeline/             Step 5 code + README (chains Step 1-4 into one CPU/GPU-comparable pipeline)
 data/                       test sentences/audio (gitignored: raw audio + large downloaded corpora)
 outputs/                    generated results -- CSVs + WAVs (gitignored, regenerate by running the scripts)
 third_party_gtcrn/          vendored GTCRN model code + checkpoint (MIT, used verbatim by Step 0)
@@ -54,6 +57,7 @@ cd src/step0_frontend && python run_all.py       # audio front-end
 cd src/step1_asr && python run_all_asr.py         # ASR
 cd src/step2_mt && python test_mt_nllb.py          # MT
 cd src/step3_tts && python test_tts_piper.py       # TTS (Vietnamese)
+cd src/step5_pipeline && python pipeline_s2s.py --device cpu   # full ASR->MT->TTS pipeline
 ```
 
 Every script writes its own `outputs/<name>_results.csv` at the repo root regardless of which step folder
