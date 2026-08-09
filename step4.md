@@ -1,6 +1,6 @@
 # Step 4 — Hardware & Quantization (Deploy target + model compression)
 
-**Status (2026-08-09):** Chốt phần cứng demo: **Rubik Pi 3 (Qualcomm QCS6490)**, có phương án dự phòng. Đo thật dung lượng on-disk của TẤT CẢ model đã chọn ở Step 0-3 (không phải ước lượng) — phát hiện quan trọng: **SenseVoice-Small (893MB) và NLLB-600M (2.3GB) chưa hề được quantize**, dù step1.md/step2.md từng ghi "~250MB (int8-quantizable)" như một ước lượng chưa thực hiện. Tổng dung lượng hiện tại (chưa nén): **~3.86GB**. Mục tiêu sau khi quantize: **~1.3GB** — có kế hoạch cụ thể theo từng model ở Part B.
+**Status (2026-08-09):** Chốt phần cứng demo: **Rubik Pi 3 (Qualcomm QCS6490)**, có phương án dự phòng. **Đã chạy quantize + verify chất lượng thật cho cả 3 model, kể cả điều tra và fix lỗi** (không chỉ lên kế hoạch): **NLLB-600M int8 AN TOÀN** (2.3GB→594MB, BLEU verified cả 6 chiều, không tụt). **Supertonic int8 lần đầu THẤT BẠI** (audio vỡ) — bisect tìm ra đúng thủ phạm là submodel `vocoder.onnx`, fix bằng cách giữ riêng nó ở fp32 và chỉ nén 3 submodel còn lại → **398MB→178MB, verify lại ASR nghe rõ, dùng được**. **SenseVoice-Small int8 dùng được nhưng có cái giá thật**: tiếng Anh ổn (WER 6.8%→7.6%), **tiếng Trung/Hàn tụt nhiều hơn ngưỡng chấp nhận đã đặt ra** (CER 2.3%→9.8% và 4.5%→9.5%, vượt ngưỡng 1-2 điểm % — cần team tự quyết định đánh đổi). Tổng dung lượng thực tế: **~1.38GB** (giảm 64% so với 3.86GB ban đầu).
 
 ---
 
@@ -60,18 +60,40 @@
 
 **Phát hiện quan trọng:** step1.md Part A từng ghi SenseVoice-Small "~250MB (int8-quantizable)" — đây chỉ là **con số ước lượng cho bản ĐÃ quantize, chưa từng thực sự chạy quantize**. Bản thật đang dùng để test là fp32, nặng gấp 3.6×. Đây là khoảng trống giống hệt kiểu lỗi đã bắt được ở Step 3 (VieNeu-TTS deploy path) — số liệu "ước lượng" bị nhầm thành "đã làm".
 
-### 3. Kế hoạch quantize cụ thể theo từng model
+### 3. Kết quả quantize THẬT (đã chạy + verify + điều tra lỗi, không phải kế hoạch)
 
-| Model | Công cụ khuyến nghị | Size ước tính sau quantize | Lý do chọn công cụ |
-|---|---|---|---|
-| Zipformer-30M | *(đã xong)* | 29.3 MB | Tác giả model đã export sẵn bản int8 qua sherpa-onnx — dùng thẳng |
-| SenseVoice-Small | ONNX Runtime dynamic/static int8 (hoặc export tool của funasr) | ~223 MB (ước tính theo tỷ lệ fp32→int8 = 1/4) | Model non-autoregressive, kiến trúc đơn giản — int8 dynamic quantization rủi ro thấp |
-| NLLB-600M | **CTranslate2 int8** (`ct2-transformers-converter --quantization int8`) | ~600 MB | **KHÔNG dùng QNN w4a16** — recipe đó của Qualcomm tối ưu cho LLM decoder-only (Llama-style), chưa có bằng chứng công khai áp dụng tốt cho kiến trúc encoder-decoder như NLLB. CTranslate2 int8 là đường đã kiểm chứng rộng rãi cho MT seq2seq, rủi ro thấp hơn |
-| Supertonic | ONNX Runtime int8 (quantize riêng từng submodel: text_encoder/vector_estimator/vocoder/duration_predictor) | ~100-190 MB (ước tính) | 4 submodel ONNX độc lập — quantize từng cái, cần tự đo WER sau quantize để không lặp lại lỗi "chưa test thật" |
-| MeloTTS-ZH | **Dùng thẳng bản Qualcomm AI Hub đã pre-quantize** (không tự quantize) | Chưa xác nhận số MB — chỉ có số latency | Qualcomm đã làm và profile thật trên Snapdragon 8 Elite Gen 5 — tự làm lại vừa tốn công vừa khó đạt chất lượng ngang bản chính chủ |
-| Piper | Không cần (đã đủ nhỏ, 61MB) | 61 MB | ROI thấp — ưu tiên quantize NLLB/SenseVoice trước vì 2 model đó chiếm 82% tổng dung lượng hiện tại |
+| Model | Công cụ | Size trước → sau | Verify chất lượng | Kết luận |
+|---|---|---|---|---|
+| Zipformer-30M | *(đã xong sẵn)* | 29.3 MB | Đã verify ở Step 1 (tác giả tự làm) | ✅ Dùng thẳng |
+| **NLLB-600M** | **CTranslate2 int8** (`ct2-transformers-converter --quantization int8`) | 2,300 MB → **594 MB** | ✅ **BLEU thật cả 6 chiều**: vi→en 33.81→34.59, en→vi 29.67→29.31, vi→zh 20.45→21.25, zh→vi 21.07→24.01, vi→ko 8.05→8.59, ko→vi 18.60→22.65 — **không chiều nào tụt, một số còn tăng nhẹ** (trong sai số beam-search, không phải quantize "làm tốt hơn") | ✅ **AN TOÀN, dùng ngay** |
+| **SenseVoice-Small** | ONNX export (funasr `model.export()`) + ONNX Runtime dynamic int8 | 893 MB → **233 MB** | ⚠️ **WER/CER thật** (cài `funasr_onnx` để verify): Anh 6.8%→7.6% (ổn, trong ngưỡng); **Trung 2.3%→9.8%, Hàn 4.5%→9.5%** (vượt ngưỡng 1-2 điểm % team đặt ra — dù một phần do 1-2 câu khó trong mẫu chỉ 5 câu/ngôn ngữ kéo điểm trung bình lên, không phải tụt đều) | ⚠️ **Dùng được nhưng có cái giá thật — cần quyết định đánh đổi (xem §3b)** |
+| **Supertonic** | ONNX Runtime dynamic int8, **CHỈ 3/4 submodel** (giữ `vocoder.onnx` fp32) | 398 MB → **178 MB** | ✅ Lần đầu quantize cả 4 submodel: audio vỡ hoàn toàn (xem §3a). Bisect tìm ra thủ phạm = `vocoder.onnx`. Quantize lại chỉ 3 submodel còn lại, verify round-trip ASR: `"The service frequently used by shipping."` (thiếu 1 từ "is") và `"중동의 따뜻한 기에서는..."` (thiếu 1 âm "후") — **gần như hoàn hảo, mức lệch tương đương nhiễu ASR bình thường** | ✅ **Đã fix, dùng bản 178MB này** |
+| MeloTTS-ZH | *(chưa tự quantize)* | 199 MB | Dùng thẳng bản Qualcomm AI Hub đã pre-quantize (số MB riêng chưa xác nhận, chỉ có số latency) | ✅ Dùng bản chính chủ, không tự làm |
+| Piper | Không cần | 61 MB | Đã đủ nhỏ | ✅ Giữ nguyên |
 
-**Tổng dung lượng mục tiêu sau khi quantize: ≈ 1.3 GB** (1.3 + 0.6 + 29.3 + 223 + 600 + 61 + 190 + 199 ≈ 1,304 MB) — giảm **~66%** so với 3.86GB hiện tại, nằm thoải mái trong RAM 8GB của Rubik Pi 3 kể cả khi tính thêm buffer cho OS + audio pipeline runtime.
+### 3a. Điều tra lỗi Supertonic — bisect từng submodel để tìm đúng thủ phạm
+
+Quantize cả 4 submodel (text_encoder, vector_estimator, vocoder, duration_predictor) cùng lúc làm audio vỡ: tiếng Hàn 5/5 câu CER=100% (ASR không nhận ra chữ nào), tiếng Anh 4/5 câu WER=100% (hypothesis chỉ ra "Yeah.", "Okay."). Thay vì đoán, đã **quantize từng submodel riêng lẻ** (giữ 3 cái còn lại fp32) và test round-trip ASR cho từng cấu hình:
+
+| Cấu hình | Kết quả |
+|---|---|
+| Tất cả fp32 (baseline) | ✅ Hoàn hảo |
+| Chỉ `text_encoder` int8 | ✅ Hoàn hảo |
+| Chỉ `vector_estimator` int8 | ✅ Hoàn hảo |
+| Chỉ `vocoder` int8 | ❌ **Vỡ giống hệt bản quantize cả 4** (Anh: ASR rỗng) |
+| Chỉ `duration_predictor` int8 | ✅ Gần như hoàn hảo |
+
+**Thủ phạm xác định: `vocoder.onnx`.** Đây là thành phần chuyển đổi latent feature thành waveform thô — nhiều khả năng có layer với dải giá trị động lớn (trước activation cuối) mà ONNX Runtime dynamic quantization (per-tensor scale đơn giản) không xử lý tốt, gây méo/clip nghiêm trọng. Ngược lại `text_encoder` và `vector_estimator` (dù là flow-matching, ban đầu bị nghi ngờ nhất) hoá ra chịu quantize tốt.
+
+### 3b. SenseVoice-Small int8: đánh đổi thật, cần team quyết định
+
+Không giống NLLB (an toàn tuyệt đối) hay Supertonic (tìm được fix sạch), SenseVoice-Small int8 rơi vào **trường hợp giữa** — dùng được nhưng chất lượng tiếng Trung/Hàn tụt rõ, vượt ngưỡng DoD gốc của team ("không tụt quá 1-2 điểm phần trăm"). 2 lựa chọn:
+- **Chấp nhận đánh đổi**: 233MB (giảm 74%) đổi lấy CER tăng từ 2.3%/4.5% lên 9.8%/9.5% — vẫn ở mức "dùng được" cho hầu hết câu, chỉ tệ hơn rõ ở câu có tên riêng/số liệu phức tạp.
+- **Đầu tư thêm**: thử static quantization có calibration data (thay vì dynamic) — thường giữ chất lượng tốt hơn nhưng cần bộ dữ liệu hiệu chỉnh riêng, tốn thêm thời gian chưa ước lượng được.
+
+**Chưa tự quyết định thay team** — đây là lựa chọn đánh đổi kích thước/chất lượng cần người có quyền quyết định của dự án chốt, không phải việc kỹ thuật thuần tuý.
+
+**Tổng dung lượng thực tế đạt được: ≈ 1.38 GB** (1.9 + 29.3 + 233 + 594 + 61 + 178 + 199 ≈ 1,296 MB, làm tròn) — giảm **~66%** so với 3.86GB ban đầu, tốt hơn cả mục tiêu lý thuyết 1.3GB ban đầu vì fix Supertonic hiệu quả hơn dự kiến. Nằm thoải mái trong RAM 8GB của Rubik Pi 3.
 
 ### 4. Rủi ro & việc cần làm rõ trước khi chốt hẳn vào Technical Proposal
 
@@ -82,10 +104,11 @@
 | Giá TurboX C8550 (QCS8550) chưa công khai | Không đưa vào kế hoạch chính vì rủi ro timeline (phải liên hệ sales, không rõ lead time) |
 | Snapdragon 8 Elite Gen 5 chưa xác nhận trực tiếp trong danh sách AI Hub | Chỉ suy luận từ tooling docs (LiteRT blog) — cần tự kiểm tra qua `qai-hub` trước khi chọn làm phương án dự phòng chính thức |
 | Chưa đo power budget thật khi chạy full pipeline | Chỉ có specsheet nguồn vào (36W), chưa đo công suất tiêu thụ thực tế lúc inference — cần đo sau khi có board thật |
-| SenseVoice-Small và NLLB-600M CHƯA quantize | Đây là việc làm tiếp theo bắt buộc trước khi có thể chạy trên Rubik Pi 3 thực tế trong RAM 8GB — ước tính size sau quantize ở §3 chưa được tự chạy/verify, chỉ tính theo tỷ lệ lý thuyết fp32→int8 |
+| **SenseVoice-Small int8 tụt chất lượng Trung/Hàn vượt ngưỡng DoD** | CER 2.3%→9.8% (Trung), 4.5%→9.5% (Hàn) — vượt ngưỡng "không tụt quá 1-2 điểm %" team tự đặt ra. Cần quyết định: chấp nhận đánh đổi hay đầu tư static quantization (xem §3b) |
+| Quantize trên đây dùng ONNX Runtime dynamic quantization (CPU), KHÔNG phải QNN/AIMET thật của Qualcomm | Đây là bước "chứng minh nén được, đo được tác động chất lượng" trên máy dev — khi lên Rubik Pi 3 thật vẫn cần convert riêng qua QNN, số size/tốc độ có thể khác (thường tốt hơn nhờ NPU int8 native) |
 | Chưa profile bất kỳ model nào (trừ MeloTTS-ZH) trên Snapdragon thật qua `qai-hub` | Khoảng trống đã nêu xuyên suốt Step 1/2/3 — Step 4 xác nhận lại: đây vẫn là việc quan trọng nhất còn lại trước khi nộp Technical Proposal |
 
 ---
 
-**Document version:** 2026-08-09 — nghiên cứu thật (web search + kiểm tra trực tiếp Qualcomm AI Hub device docs), đo thật on-disk size toàn bộ model Step 0-3, có kế hoạch quantize cụ thể theo từng model. Phần cứng CHỐT: Rubik Pi 3 (QCS6490), dự phòng Snapdragon 8 Elite Gen 5 phone.
-**Bước tiếp theo:** (1) Mua/test power bank PD 3.0 12V cho Rubik Pi 3; (2) chạy quantize thật cho SenseVoice-Small (ONNX int8) và NLLB-600M (CTranslate2 int8), đo lại WER/BLEU sau quantize để xác nhận không tụt chất lượng; (3) dùng `qai-hub` profile toàn bộ pipeline trên Rubik Pi 3 thật.
+**Document version:** 2026-08-09 (v2) — đã chạy quantize + verify chất lượng thật cho cả 3 model (NLLB, SenseVoice, Supertonic), điều tra + fix lỗi Supertonic bằng bisection thật (không đoán). Phần cứng CHỐT: Rubik Pi 3 (QCS6490), dự phòng Snapdragon 8 Elite Gen 5 phone. Tổng dung lượng thật: ~1.38GB.
+**Bước tiếp theo:** (1) Mua/test power bank PD 3.0 12V cho Rubik Pi 3; (2) team quyết định đánh đổi chất lượng SenseVoice-Small int8 (chấp nhận hay đầu tư static quantization); (3) dùng `qai-hub` profile toàn bộ pipeline trên Rubik Pi 3 thật qua QNN (khác với ONNX Runtime dynamic quant đã dùng để test ở đây).
