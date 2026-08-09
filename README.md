@@ -15,16 +15,21 @@ numbers live in each module's `stepN.md`.
 | 0 | Audio Front-end (VAD + denoise + beamform) | Silero VAD + GTCRN + MVDR/GSC | [step0.md](step0.md) | [src/step0_frontend/](src/step0_frontend/) |
 | 1 | ASR (Speech Recognition) | Zipformer-30M (Vi) + SenseVoice-Small (En/Zh/Ko) | [step1.md](step1.md) | [src/step1_asr/](src/step1_asr/) |
 | 2 | MT (Machine Translation) | NLLB-200-distilled-600M | [step2.md](step2.md) | [src/step2_mt/](src/step2_mt/) |
-| 3 | TTS (Speech Synthesis) | Piper/VieNeu-TTS (Vi) + Supertonic (Ko/En) + MeloTTS-ZH (Zh) | [step3.md](step3.md) | [src/step3_tts/](src/step3_tts/) |
+| 3 | TTS (Speech Synthesis) | Piper (Vi) + Supertonic (Ko/En) + MeloTTS-ZH (Zh) | [step3.md](step3.md) | [src/step3_tts/](src/step3_tts/) |
+| 4 | Hardware & Quantization | Rubik Pi 3 (QCS6490), fallback Snapdragon 8 Elite phone | [step4.md](step4.md) | — (planning doc, no code yet) |
 
 **Known open gap (flagged in every stepN.md):** all RTF numbers above except MeloTTS-ZH are measured on a
 dev-machine GPU/CPU, not real Snapdragon hardware. MeloTTS-ZH is the only module profiled on an actual
 Snapdragon 8 Elite Gen 5 via Qualcomm AI Hub. Next step for every other module: `qai-hub` remote-profiling.
 
+**Total model footprint (real, on-disk, measured in step4.md):** ~3.86GB unquantized today → ~1.3GB target
+after quantizing SenseVoice-Small and NLLB-600M (the two pieces that were never actually quantized despite
+earlier size estimates assuming they had been).
+
 ## Repo layout
 
 ```
-step0.md ... step3.md     full per-module analysis: every candidate tested, why it was chosen/rejected, real numbers
+step0.md ... step4.md     full per-module analysis: every candidate tested, why it was chosen/rejected, real numbers
 src/
   common.py                shared utilities (device selection, WAV I/O, WER/CER normalization, RTF calc)
   step0_frontend/           Step 0 code + README
