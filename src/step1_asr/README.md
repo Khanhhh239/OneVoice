@@ -34,8 +34,8 @@ Results -> `outputs/asr_*_results.csv` (WER/CER/RTF per language, per SNR level)
 
 Dựa trên kết luận giữ kiến trúc **Split** (Zipformer cho Tiếng Việt + SenseVoice cho Anh/Trung/Hàn), mã nguồn đã được tái cấu trúc thành một Pipeline thống nhất duy nhất để dễ dàng tích hợp vào Step 5 (End-to-end pipeline) sau này.
 
-- `unified_asr.py`: Đóng gói bộ 2 mô hình (Zipformer và SenseVoice) vào class `UnifiedASRPipeline`. Class này sẽ nhận input `(audio_path, lang)` và tự động định tuyến (route) sang model phù hợp mà không cần gọi script rời rạc.
-- `test_unified_asr.py`: Script kiểm thử toàn diện đánh giá trực tiếp class `UnifiedASRPipeline` trên toàn bộ tập dữ liệu (kể cả file nguyên bản và file đã mix nhiễu SNR khó). Tự động tính toán WER/CER và RTF (độ trễ) cho 4 ngôn ngữ trong cùng một lần chạy.
+- `unified_asr.py`: Đóng gói bộ 2 mô hình (Zipformer và SenseVoice) vào class `UnifiedASRPipeline`. Class này nhận input `(audio_path, lang)` và tự động định tuyến sang model phù hợp. **Đặc biệt:** Hỗ trợ cờ `UnifiedASRPipeline(use_denoiser=True)` để tự động tích hợp mô hình khử nhiễu **GTCRN** (từ Step 0) làm sạch âm thanh trước khi nhận dạng, giúp tăng cường khả năng xử lý trên dữ liệu ồn ào.
+- `test_unified_asr.py`: Script kiểm thử toàn diện class `UnifiedASRPipeline` trên toàn bộ tập dữ liệu. Tự động tính toán WER/CER và RTF (độ trễ) cho 4 ngôn ngữ. Đối với dữ liệu nhiễu (`asr_mixed`), script sẽ tự động test cả 2 kịch bản (có dùng và không dùng Denoiser) để so sánh đối chiếu.
 
 ### Hướng dẫn chạy Unified Test
 
@@ -46,8 +46,8 @@ cd src/step1_asr
 python fetch_asr_data.py
 python mix_asr_noise.py
 
-# Chạy test đánh giá Pipeline thống nhất
+# Chạy test đánh giá Pipeline thống nhất (bao gồm test khử nhiễu)
 python test_unified_asr.py
 ```
 
-Kết quả tổng hợp sẽ được lưu tại `outputs/asr_unified_results.csv`. Tốc độ trung bình (RTF) của pipeline thống nhất đạt khoảng `~0.03` trên máy tính cá nhân.
+Kết quả tổng hợp sẽ được lưu tại `outputs/asr_unified_results.csv` (có thêm cột `denoised` báo hiệu file đó đã được làm sạch tiếng ồn hay chưa). Tốc độ trung bình (RTF) của pipeline thống nhất đạt khoảng `~0.03` trên máy tính cá nhân.
