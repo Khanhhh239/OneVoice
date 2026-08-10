@@ -7,6 +7,11 @@ data/**/*.ogg
 data/mixed/
 data/mt/flores200_dataset.tar.gz
 data/mt/raw/
+data/mt/ntrex_raw/
+data/mt/ntrex_all_pairs.jsonl
+data/mt/amazon-massive-dataset-*.tar.gz
+data/mt/massive_test_all_pairs.jsonl
+data/mt/flores_all_pairs.jsonl
 outputs/
 __pycache__/
 *.pyc

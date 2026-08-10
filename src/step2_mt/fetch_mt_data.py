@@ -12,14 +12,10 @@ line number = same source sentence, different language).
 Maps to Technical Proposal SS4.2/SS4.3 (MT row) for Vi<->En/Zh/Ko.
 """
 import os
-import sys
 import json
 import random
 import tarfile
 import urllib.request
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/ (for common.py)
-from common import _ensure_utf8_stdout  # noqa: F401 -- side effect import
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(ROOT, "data", "mt")
@@ -29,7 +25,7 @@ MANIFEST = os.path.join(OUT_DIR, "manifest.json")
 TARBALL_URL = "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz"
 TARBALL_PATH = os.path.join(OUT_DIR, "flores200_dataset.tar.gz")
 LANG_CODES = {"vi": "vie_Latn", "en": "eng_Latn", "zh": "zho_Hans", "ko": "kor_Hang"}
-N_SENTENCES = 30
+N_SENTENCES = 1012
 SEED = 0
 
 
@@ -43,7 +39,7 @@ def download_and_extract():
         os.makedirs(RAW_DIR, exist_ok=True)
         with tarfile.open(TARBALL_PATH, "r:gz") as tf:
             members = [m for m in tf.getmembers() if "/devtest/" in m.name]
-            tf.extractall(RAW_DIR, members=members)
+            tf.extractall(RAW_DIR, members=members, filter="data")
 
 
 def find_devtest_file(lang_code):

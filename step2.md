@@ -1,6 +1,8 @@
 # Step 2 — MT (Machine Translation, Text → Text)
 
-**Status (2026-08-09):** Code-tested thật (NLLB-600M vs Qwen3-0.6B vs Qwen3-1.7B trên FLORES-200, 6 chiều) + research full-text 5/7 paper cho streaming policy, low-resource, code-switch. Kiến trúc **CHỐT**: NLLB-200-distilled-600M + AlignAtt.
+**Status (2026-08-10, artifact-verified):** Baseline NLLB-600M đã chạy **71.796 lượt dịch** trên FLORES/NTREX/MASSIVE, đủ 12 chiều; FLORES có COMET mean **0,8312**. Full FLORES cho NLLB-1.3B tăng BLEU ở **10/12 hướng**; quality profile dùng router 1.3B và fallback 600M cho `en→ko`, `en→zh`, estimated mean **+1,548 BLEU** so với baseline. CTranslate2 INT8 local đạt **599,65 MiB**. LoRA PhoMT bị **REJECT** vì BLEU giảm. Streaming/AlignAtt-text đã chạy đủ 12 hướng nhưng vẫn experimental; Snapdragon/QNN chưa đo thật.
+
+**Implementation chuẩn:** code tại `src/step2_mt/`, báo cáo tại `STEP2_MT_FINAL_REPORT.md`, artifact nộp tại `artifacts/step2/OneVoice_MT_FINAL_QUALITY.zip`.
 
 ---
 
@@ -8,8 +10,9 @@
 
 | Module | Model / Framework | Size (est.) | Latency Target | Key Technique |
 |---|---|---|---|---|
-| NMT (core) | NLLB-200-distilled-600M | ~600M params (~1.2GB fp16, int8 quantizable to ~600MB) | RTF <0.1 non-streaming (measured: 0.4–0.9s/sentence on FLORES-200) | Fine-tune per pair; self-converted ONNX→QNN (not on Qualcomm AI Hub) |
-| Streaming policy (MVP) | AlignAtt (Papi et al., 2023) | 0 extra params | AL ≈ 2s (reference number from source paper) | Cross-attention threshold, zero retraining, applied directly on NLLB |
+| NMT (core) | NLLB-200-distilled-600M baseline | ~600M params; CT2 int8 **599,65 MiB đo thật** | Kaggle T4 full P50 ~0,04–0,05 giây/câu FLORES/NTREX | **Checkpoint deploy chốt**; LoRA hiện tại không bật vì benchmark giảm |
+| Streaming policy (MVP hiện có) | chunk re-decode + stable-prefix | 0 extra params | Quét chunk 2/4/8 và đo AL/LAAL token bằng code | Baseline trung thực, không gọi là AlignAtt |
+| Streaming policy (mục tiêu) | AlignAtt (Papi et al., 2023) | 0 extra params | Bản text xuất AL/LAAL theo source token; AL ≈ 2s chỉ là số paper speech tham khảo | Cross-attention hook đã có/smoke; SimulEval speech-frame chưa tích hợp |
 | Streaming policy (upgrade path) | AliBaStr-style read/write policy network | +~1–3M params | 32–37% latency reduction vs non-streaming (reference: comparable on-device system, Meta AI arXiv 2508.13358) | Supervised policy net trained on attention pseudo-labels |
 | Low-resource boost (Vi↔Zh, Vi↔Ko) | mBART-50 fine-tune + domain-filtered back-translation | — | — | TF-IDF monolingual selection + back-translation (NOT naive BT) |
 | Code-switch handling | Copy-Through augmentation (identity pairs in fine-tune data) | — | — | Cheaper than full LLM-based augmentation pipeline |
@@ -100,8 +103,8 @@ Kiểm tra 5 câu vi→ko thật của NLLB: **phần lớn ngữ nghĩa đúng*
 
 ### 8. Kiến trúc tổng hợp cuối
 
-- **Live mode**: NLLB-600M fine-tune per pair + AlignAtt.
-- **Vi↔En**: fine-tune trên PhoMT (chất lượng cao sẵn, không cần back-translation).
+- **Live mode hiện tại**: NLLB-600M baseline; sentence/chunk greedy. AlignAtt-text là nhánh experimental.
+- **Vi↔En**: hai LoRA PhoMT 50K đã thử và bị loại vì làm BLEU giảm; giữ baseline.
 - **Vi↔Zh, Vi↔Ko**: fine-tune + back-translation domain-filtered (TF-IDF) + tuỳ chọn bổ sung synthetic data từ Hunyuan-MT-7B teacher. Kỳ vọng: cải thiện rõ so với from-scratch, KHÔNG kỳ vọng vượt Google Translate.
 - **Code-switch**: Copy-Through augmentation, đánh giá bằng VietMix test set.
 - **Nâng cấp nếu còn thời gian**: policy network kiểu AliBaStr-MT thay AlignAtt; Qwen3-1.7B riêng cho vi→zh nếu cần.
@@ -118,4 +121,4 @@ Kiểm tra 5 câu vi→ko thật của NLLB: **phần lớn ngữ nghĩa đúng*
 ---
 
 **Document version:** 2026-08-09 — code-tested NLLB-600M vs Qwen3-0.6B/1.7B trên FLORES-200 thật (6 chiều), kiến trúc chốt, Part A khớp format §4.2 Technical Proposal chính thức.
-**Bước tiếp theo:** Fine-tune NLLB theo từng cặp; đo lại vi↔ko bằng COMET/xCOMET; xác nhận kế hoạch tự quantize ONNX→QNN trong Hardware section (§5).
+**Bước tiếp theo sau bản nộp:** chỉ thử lại fine-tune khi có recipe chọn checkpoint theo validation metric; hoàn thiện SimulEval speech-frame và profile Snapdragon/QCS6490 thật. Không chặn MVP baseline.
