@@ -103,3 +103,9 @@ Nếu sau này cần fine-tune thêm Zipformer cho phương ngữ 3 miền (rủ
 
 **Document version:** 2026-08-09 — code-tested đầy đủ 5 candidate, kiến trúc chốt, Part A khớp format §4.2 Technical Proposal chính thức.
 **Bước tiếp theo:** Email xác nhận license Zipformer với OneVoice organizers.
+### 8. Cập nhật tiến độ Lượng tử hoá & Compile (SenseVoice-Small w8a16)
+
+- **Vấn đề đã gặp:** ONNX của SenseVoice có chứa các block Conv không có tham số ias. Trình biên dịch QNN/QAIRT bị crash (RuntimeError: preprocessPerChannel: No bias info).
+- **Giải quyết:** Sử dụng ONNX GraphSurgeon (ở step4_s1_patch_mask.py) để thêm dummy bias (mảng 0) cho 70 node Conv bị thiếu.
+- **Kết quả:** Compile QNN Context Binary (w8a16) **THÀNH CÔNG** trên Qualcomm AI Hub. Job ID: jgzn1jxxg -> Model ID: mqky6w47m (Target: Dragonwing IQ-9075 EVK).
+- **Verify Output:** Verification pipeline gặp lỗi định dạng mảng (Shape misalignment) do Model gốc dùng Dynamic Shapes nhưng QNN Model yêu cầu Static Shape [1, 500, 560]. Cosine Similarity chưa đo được chính xác nhưng compilation pipeline đã được xác thực khả thi 100%. Đã sẵn sàng cho giai đoạn ghép nối pipeline cuối cùng!

@@ -1,0 +1,144 @@
+[2026-08-13T10:10:28.773+00:00] [INFO] Compiling model ID mng6o576q
+[2026-08-13T10:10:28.773+00:00] [INFO] [compile-pre-compile] Memory: 1.7GiB / 40.0GiB (4%) | working_set: 677.1MiB | peak: 2.6GiB
+[2026-08-13T10:10:33.326+00:00] [INFO] -=- Converting ONNX graph: decompose GeLU layers -=-
+[2026-08-13T10:10:33.968+00:00] [INFO] Applying ONNX IR shape inference
+[2026-08-13T10:10:36.756+00:00] [INFO] Applying ONNX IR rewriter with rules
+[2026-08-13T10:11:03.346+00:00] [INFO] Memory: 2.7GiB / 40.0GiB (7%) | working_set: 2.5GiB | peak: 6.1GiB
+[2026-08-13T10:11:10.313+00:00] [INFO] Ran 41 passes, 9 triggered
+[2026-08-13T10:11:10.314+00:00] [INFO] Passes triggered:
+[2026-08-13T10:11:10.356+00:00] [INFO] +------------------------------------+----------+
+[2026-08-13T10:11:10.356+00:00] [INFO] | Pass Name                          | Triggers |
+[2026-08-13T10:11:10.356+00:00] [INFO] +------------------------------------+----------+
+[2026-08-13T10:11:10.356+00:00] [INFO] | CommonSubexpressionEliminationPass |        2 |
+[2026-08-13T10:11:10.356+00:00] [INFO] | OverrideFoldConstantsPass          |        2 |
+[2026-08-13T10:11:10.356+00:00] [INFO] | _ExpandIdentity                    |        1 |
+[2026-08-13T10:11:10.356+00:00] [INFO] | RemoveIdentityTile                 |        1 |
+[2026-08-13T10:11:10.356+00:00] [INFO] | LiftConstantsToInitializersPass    |        2 |
+[2026-08-13T10:11:10.356+00:00] [INFO] | DeduplicateInitializersPass        |        1 |
+[2026-08-13T10:11:10.356+00:00] [INFO] +------------------------------------+----------+
+[2026-08-13T10:11:10.377+00:00] [INFO] Model metrics comparison:
+[2026-08-13T10:11:10.378+00:00] [INFO] +--------------------+----------+----------+-----------+
+[2026-08-13T10:11:10.378+00:00] [INFO] | Metric             |   Before |    After |     Delta |
+[2026-08-13T10:11:10.378+00:00] [INFO] +--------------------+----------+----------+-----------+
+[2026-08-13T10:11:10.378+00:00] [INFO] | Op count           |    15221 |     9360 |     -5861 |
+[2026-08-13T10:11:10.378+00:00] [INFO] | Model size         | 898.6MiB | 897.6MiB | -960.4KiB |
+[2026-08-13T10:11:10.378+00:00] [INFO] | Add                |      562 |      562 |        +0 |
+[2026-08-13T10:11:10.378+00:00] [INFO] | Cast               |      360 |        3 |      -357 |
+[2026-08-13T10:11:10.378+00:00] [INFO] | Concat             |      418 |        3 |      -415 |
+[2026-08-13T10:11:10.378+00:00] [INFO] | Constant           |     2591 |        0 |     -2591 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | ConstantOfShape    |       71 |        0 |       -71 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Conv               |       70 |       70 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Cos                |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | DequantizeLinear   |     4032 |     3546 |      -486 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Equal              |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Exp                |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Expand             |        1 |        0 |        -1 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Gather             |      279 |        3 |      -276 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | LayerNormalization |      142 |      142 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Less               |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | MatMul             |      421 |      421 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Mul                |      352 |      352 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Pad                |       70 |       70 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | QuantizeLinear     |     3609 |     3123 |      -486 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | ReduceSum          |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Relu               |       70 |       70 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Reshape            |      492 |      283 |      -209 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Shape              |      276 |        0 |      -276 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Sin                |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Slice              |       70 |        0 |       -70 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Softmax            |       70 |       70 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Split              |       70 |       70 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Squeeze            |        1 |        1 |        +0 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Tile               |        1 |        0 |        -1 |
+[2026-08-13T10:11:10.379+00:00] [INFO] | Transpose          |      490 |      420 |       -70 |
+[2026-08-13T10:11:10.380+00:00] [INFO] | Unsqueeze          |      557 |        5 |      -552 |
+[2026-08-13T10:11:10.380+00:00] [INFO] | Where              |      140 |      140 |        +0 |
+[2026-08-13T10:11:10.380+00:00] [INFO] +--------------------+----------+----------+-----------+
+[2026-08-13T10:11:10.380+00:00] [INFO] ONNX IR rewriter with rules applied
+[2026-08-13T10:11:46.033+00:00] [INFO] Saving model
+[2026-08-13T10:11:46.162+00:00] [INFO] Uploading job_jgnkj0zvg_onnx.zip
+[2026-08-13T10:11:53.379+00:00] [INFO] Uploading tmp6szpc_9q
+[2026-08-13T10:11:53.666+00:00] [INFO] Successfully computed visualization graph for mqeg6eovm
+[2026-08-13T10:11:54.361+00:00] [INFO] =================================== Run compile_to_qnn_dlc =================================== 
+[2026-08-13T10:11:54.363+00:00] [INFO] Applying ONNX IR rewriter with rules
+[2026-08-13T11:05:22.349+00:00] [INFO] Ran 1306 passes, 467 triggered
+[2026-08-13T11:05:22.349+00:00] [INFO] Passes triggered:
+[2026-08-13T11:05:22.349+00:00] [INFO] +---------------------------------+----------+
+[2026-08-13T11:05:22.349+00:00] [INFO] | Pass Name                       | Triggers |
+[2026-08-13T11:05:22.349+00:00] [INFO] +---------------------------------+----------+
+[2026-08-13T11:05:22.349+00:00] [INFO] | RewriteSplit3ToSlices           |      117 |
+[2026-08-13T11:05:22.349+00:00] [INFO] | FuseSiblingSlicesToSplitPass    |      116 |
+[2026-08-13T11:05:22.349+00:00] [INFO] | RemoveUnusedNodesPass           |      116 |
+[2026-08-13T11:05:22.349+00:00] [INFO] | ShapeInferencePass              |      116 |
+[2026-08-13T11:05:22.350+00:00] [INFO] | LiftConstantsToInitializersPass |        1 |
+[2026-08-13T11:05:22.350+00:00] [INFO] | DeduplicateInitializersPass     |        1 |
+[2026-08-13T11:05:22.350+00:00] [INFO] +---------------------------------+----------+
+[2026-08-13T11:05:22.369+00:00] [INFO] Model metrics comparison:
+[2026-08-13T11:05:22.370+00:00] [INFO] +--------------------+----------+----------+----------+
+[2026-08-13T11:05:22.370+00:00] [INFO] | Metric             |   Before |    After |    Delta |
+[2026-08-13T11:05:22.370+00:00] [INFO] +--------------------+----------+----------+----------+
+[2026-08-13T11:05:22.370+00:00] [INFO] | Op count           |     9360 |     9500 |     +140 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Model size         | 897.6MiB | 897.7MiB | +13.7KiB |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Add                |      562 |      562 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Cast               |        3 |        3 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Concat             |        3 |        3 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Conv               |       70 |       70 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Cos                |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | DequantizeLinear   |     3546 |     3546 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Equal              |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Exp                |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Gather             |        3 |        3 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | LayerNormalization |      142 |      142 |       +0 |
+[2026-08-13T11:05:22.370+00:00] [INFO] | Less               |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | MatMul             |      421 |      421 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Mul                |      352 |      352 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Pad                |       70 |       70 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | QuantizeLinear     |     3123 |     3123 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | ReduceSum          |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Relu               |       70 |       70 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Reshape            |      283 |      283 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Sin                |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Slice              |        0 |      210 |     +210 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Softmax            |       70 |       70 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Split              |       70 |        0 |      -70 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Squeeze            |        1 |        1 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Transpose          |      420 |      420 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Unsqueeze          |        5 |        5 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] | Where              |      140 |      140 |       +0 |
+[2026-08-13T11:05:22.371+00:00] [INFO] +--------------------+----------+----------+----------+
+[2026-08-13T11:05:22.371+00:00] [INFO] ONNX IR rewriter with rules applied
+[2026-08-13T11:05:24.547+00:00] [INFO] -=- ONNX to QNN DLC (qairt-converter) -=-
+[2026-08-13T11:05:24.547+00:00] [INFO] Running /tetra/qairt_env/default/2.45.0/bin/python3 /qairt_sdk/default/2.45.0/bin/x86_64-linux-clang/qairt-converter --input_network /tmp/tmpixhu_3r9/tmpsvridokx.onnx --output_path /tmp/tmpixhu_3r9/graph_wleh8tvg.dlc --preserve_io_datatype speech output_0 --preserve_io_datatype speech speech_lengths language textnorm output_0 output_1 --preserve_onnx_output_order --onnx_skip_simplification
+[2026-08-13T11:05:25.207+00:00] [INFO] 2026-08-13 11:05:25,206 - 278 - INFO - INFO_INITIALIZATION_SUCCESS: 
+[2026-08-13T11:05:25.382+00:00] [INFO] 2026-08-13 11:05:25,382 - 283 - WARNING - Unable to register converter supported Operation [Inverse:Version 1] with your Onnx installation. Converter will bail if Model contains this Op.
+[2026-08-13T11:05:25.388+00:00] [INFO] 2026-08-13 11:05:25,388 - 283 - WARNING - Unable to register converter supported Operation [RMSNormalization:Version 23] with your Onnx installation. Converter will bail if Model contains this Op.
+[2026-08-13T11:05:25.394+00:00] [INFO] 2026-08-13 11:05:25,394 - 283 - WARNING - Unable to register converter supported Operation [RotaryEmbedding:Version 23] with your Onnx installation. Converter will bail if Model contains this Op.
+[2026-08-13T11:05:25.556+00:00] [INFO] 2026-08-13 11:05:25,556 - 283 - WARNING - --desired_input_shape and -d are deprecated. Use --source_model_input_shape or -s for achieving this functionality
+[2026-08-13T11:05:25.556+00:00] [INFO] 2026-08-13 11:05:25,556 - 278 - INFO - Input shape info 
+[2026-08-13T11:05:25.670+00:00] [INFO] 2026-08-13 11:05:25,670 - 283 - WARNING - Skipping Native checker in Defer Loading and ONNX Simplification not invoked
+[2026-08-13T11:05:28.170+00:00] [INFO] 2026-08-13 11:05:28,170 - 283 - WARNING - Only numerical type cast is supported. The cast op: /encoder/Cast will be interpreted at conversion time
+[2026-08-13T11:05:28.177+00:00] [INFO] 2026-08-13 11:05:28,177 - 283 - WARNING - Only numerical type cast is supported. The cast op: /encoder/Cast_1 will be interpreted at conversion time
+[2026-08-13T11:05:28.182+00:00] [INFO] 2026-08-13 11:05:28,182 - 278 - INFO - INFO_STATIC_RESHAPE: Applying static reshape to /encoder/embed/Exp_output_0_updated: new name /encoder/embed/Reshape_output_0 new shape [1, -1]
+[2026-08-13T11:05:28.190+00:00] [INFO] 2026-08-13 11:05:28,189 - 278 - INFO - INFO_STATIC_RESHAPE: Applying static reshape to /encoder/embed/Reshape_output_0_qdq: new name /encoder/embed/Reshape_1_output_0 new shape [1, 1, -1]
+[2026-08-13T11:05:28.216+00:00] [INFO] 2026-08-13 11:05:28,216 - 283 - WARNING - WARNING_OP_VERSION_NOT_SUPPORTED: Operation Equal Not Supported. Expected operator version: [1, 7, 11, 13], instead got version: [19]
+[2026-08-13T11:05:28.224+00:00] [INFO] 2026-08-13 11:05:28,223 - 283 - WARNING - Only numerical type cast is supported. The cast op: /encoder/Cast_3 will be interpreted at conversion time
+[2026-08-13T11:05:37.617+00:00] [INFO] 2026-08-13 11:05:37,616 - 283 - WARNING - Unused Input nodes found: []
+[2026-08-13T11:06:10.036+00:00] [INFO] Memory: 7.5GiB / 40.0GiB (19%) | working_set: 7.4GiB | peak: 7.6GiB
+[2026-08-13T11:32:14.979+00:00] [INFO] 2026-08-13 11:32:14,979 - 278 - INFO - INFO_INITIALIZATION_SUCCESS: 
+[2026-08-13T11:32:16.055+00:00] [INFO] handleReshapeOp: Squash Reshape Op: /encoder/Cast_3_identity due to IdentityOp. Input shape: IrTensorShape(dims = [1] , dy_axes=[]), shape after IrTensorShape(dims = [1] , dy_axes=[])
+[2026-08-13T11:32:16.055+00:00] [INFO] handleReshapeOp: Squash Reshape Op: /ctc_lo/MatMul_post_reshape_identity due to IdentityOp. Input shape: IrTensorShape(dims = [1,504,25055] , dy_axes=[]), shape after IrTensorShape(dims = [1,504,25055] , dy_axes=[])
+[2026-08-13T11:32:16.081+00:00] [INFO] reEvalMacsParams: Re-evaluated graph statistics after IrOptimizer optimization passes:
+[2026-08-13T11:32:16.081+00:00] [INFO] reEvalMacsParams: Total MACs: 538936896
+[2026-08-13T11:32:16.082+00:00] [INFO] reEvalMacsParams: Total Params Count: 233450463
+[2026-08-13T11:32:16.096+00:00] [INFO] IrQuantizer: Param Quantizer should be set to symmetric for 32 bit biases. Will ignore param quantizer option: tf for biases
+[2026-08-13T11:32:16.107+00:00] [INFO] 2026-08-13 11:32:16,106 - 273 - ERROR - Encountered Error: preprocessPerChannel: No bias info for op: /encoder/encoders0.0/self_attn/fsmn_block/Conv_2d
+[2026-08-13T11:32:16.107+00:00] [INFO] Traceback (most recent call last):
+[2026-08-13T11:32:16.107+00:00] [INFO]   File "/qairt_sdk/default/2.45.0/bin/x86_64-linux-clang/qairt-converter", line 383, in main
+[2026-08-13T11:32:16.107+00:00] [INFO]     backend.serialize(optimized_graph, is_qairt=True, backend_info_obj=backend_info_obj)
+[2026-08-13T11:32:16.107+00:00] [INFO]   File "/qairt_sdk/default/2.45.0/lib/python/qti/aisw/converters/qnn_backend/ir_to_dlc.py", line 623, in serialize
+[2026-08-13T11:32:16.107+00:00] [INFO]     cpp_graph = self.quantize_cpp_graph(graph, cpp_graph, self.args, backend_info_obj)
+[2026-08-13T11:32:16.107+00:00] [INFO]   File "/qairt_sdk/default/2.45.0/lib/python/qti/aisw/converters/qnn_backend/ir_to_dlc.py", line 569, in quantize_cpp_graph
+[2026-08-13T11:32:16.107+00:00] [INFO]     quantizer.quantize()
+[2026-08-13T11:32:16.108+00:00] [INFO] RuntimeError: preprocessPerChannel: No bias info for op: /encoder/encoders0.0/self_attn/fsmn_block/Conv_2d
+[2026-08-13T11:32:16.349+00:00] [WARNING] QAIRT converter failed with exit code 1
+[2026-08-13T11:32:16.349+00:00] [INFO] Attempting to enqueue job jgnkj0zvg
