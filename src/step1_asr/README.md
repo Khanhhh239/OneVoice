@@ -4,6 +4,34 @@ Full analysis, all 5 candidates tested with real numbers, license caveats: [`../
 
 **Picks:** Zipformer-30M-RNNT-6000h (Vietnamese) + SenseVoice-Small (English/Chinese/Korean). PhoWhisper, Moonshine, and Qwen3-ASR-0.6B were all tested and rejected — see step1.md §12-15 for why.
 
+## Cấu trúc thư mục (Directory Structure)
+Dưới đây là giải thích chi tiết về chức năng của từng file/folder trong src/step1_asr:
+
+### Dữ liệu & Benchmark
+- fetch_asr_data.py: Tải và chuẩn bị dữ liệu âm thanh mẫu từ dataset FLEURS (tạo ra thư mục data/asr).
+- mix_asr_noise.py: Trộn nhiễu (noise) vào audio để tạo tập dữ liệu test đánh giá độ bền (robustness) của model trong môi trường ồn (tạo ra thư mục data/asr_mixed).
+- 
+un_all_asr.py: Chạy toàn bộ các bài test benchmark cho tất cả các ứng viên ASR (PhoWhisper, SenseVoice, Zipformer, Moonshine, Qwen).
+
+### Scripts Kiểm thử (Test Scripts)
+- 	est_asr_vi.py: Benchmark cho mô hình PhoWhisper (Tiếng Việt).
+- 	est_asr_multi.py: Benchmark cho mô hình SenseVoice-Small (Đa ngôn ngữ).
+- 	est_asr_zipformer.py: Benchmark cho mô hình Zipformer (Tiếng Việt).
+- 	est_asr_moonshine.py: Benchmark cho mô hình Moonshine (Đa ngôn ngữ).
+- 	est_asr_qwen.py: Benchmark cho mô hình Qwen3-ASR-0.6B.
+
+### Pipeline Tích hợp (Unified Pipeline)
+- unified_asr.py: File cấu trúc luồng (Pipeline) kết hợp Zipformer (Tiếng Việt) và SenseVoice (Anh/Trung/Hàn), có hỗ trợ cờ bật/tắt module khử nhiễu GTCRN tự động trước khi nhận dạng.
+- 	est_unified_asr.py: Chạy test kiểm thử cho pipeline tích hợp phía trên.
+
+### Quantization & NPU Deployment (SenseVoice)
+- step4_s1_export_sensevoice_onnx.py: Trích xuất (Export) mô hình SenseVoice-Small sang định dạng ONNX với input kích thước tĩnh (Static Shape).
+- step4_s1_patch_mask.py: Sử dụng onnx-graphsurgeon để bơm các mảng bias ảo (dummy bias) vào các lớp Convolution bị lỗi nhằm vượt qua lỗi biên dịch của QAIRT.
+- step4_s1_prepare_calib.py: Chuẩn bị dữ liệu Calibration để quá trình Lượng tử hoá (Quantization) diễn ra chính xác.
+- step4_s1_qai_hub_submit.py: Dùng nền tảng Qualcomm AI Hub để nén mô hình ONNX xuống định dạng w8a16 và biên dịch (cross-compile) sang QNN Context Binary cho Hexagon NPU.
+- step4_s1_verify_w8a16.py: Gửi yêu cầu chạy Inference (suy luận) lên NPU thật (giả lập Dragonwing IQ-9075 EVK) và tính toán độ lệch Cosine Similarity so với bản gốc FP32.
+- step4_s1_profile_w8a16.py: Khởi chạy Profile Job trên NPU để đo đạc các thông số hiệu năng siêu việt (Độ trễ Latency, Tiêu thụ bộ nhớ Peak Memory).
+
 ## Setup
 
 ```bash
