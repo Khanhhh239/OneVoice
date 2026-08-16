@@ -70,7 +70,7 @@ Kết quả tổng hợp sẽ được lưu tại `outputs/asr_unified_results.c
 Sau khi khắc phục lỗi bất đồng bộ kích thước mảng (Padding Mismatch) giữa mô hình QNN w8a16 tĩnh và FP32 động, kết quả đo đạc độ tương đồng (Cosine Similarity) trên 15 file mẫu như sau:
 
 - **Trung bình (Average Cosine Similarity):** ~0.9347 (93.47%)
-- **Phân bổ:** Dao động từ `0.89 đến `0.95 tuỳ theo từng file audio.
+- **Phân bổ:** Dao động từ `0.89 đến 0.95` tuỳ theo từng file audio.
 
 **Kết luận về độ thông minh:**
 Dựa trên tiêu chí đánh giá khắt khe (*< 0.95 là model bị "ngu" đi nhiều*), mạng Neural w8a16 đã **thực sự bị suy giảm đáng kể** ở mức độ mảng xác suất Logits gốc. Việc ép kiểu (Quantization) các tham số từ số thực 32-bit (FP32) xuống số nguyên 8-bit (INT8/W8A16) khiến phân phối xác suất của mô hình bị xê dịch lớn.
@@ -97,6 +97,6 @@ Việc thiết kế Pipeline và lượng tử hoá như hiện tại đã tối
 2. **Các thành phần bắt buộc giữ lại trên CPU (Kiến trúc Hybrid):**
    Tuy nhiên, quy trình nhận dạng giọng nói không chỉ có mạng Neural. Tương tự như chiến lược tối ưu phổ biến, chúng tôi vẫn giữ lại 2 module chạy trên **CPU**:
    - **Frontend (Feature Extraction - STFT/Fbank):** Việc biến đổi tín hiệu sóng âm thô (raw wav) thành đặc trưng phổ (Fbank [1, T, 560]) đòi hỏi các phép toán DSP và Fourier Transform. NPU không được thiết kế cho tác vụ này, nên việc trích xuất đặc trưng được thực hiện bằng C++/Python trên CPU, sau đó mới nạp ma trận Fbank vào NPU.
-   - **CTC Decoder & Tokenizer:** NPU sẽ trả về một ma trận Logits khổng lồ (kích thước [1, 500, 25055]). CPU sẽ tiếp nhận ma trận này để làm bước cuối cùng: tính rgmax (tìm ID từ vựng có xác suất cao nhất), gộp các token trùng lặp (CTC Decode) và map sang chuỗi văn bản UTF-8 (Anh/Trung/Hàn). Tác vụ này tốn chưa tới 1ms trên CPU nhưng lại bất khả thi nếu ép NPU phải làm vì nó mang nặng tính logic chuỗi.
+   - **CTC Decoder & Tokenizer:** NPU sẽ trả về một ma trận Logits khổng lồ (kích thước [1, 500, 25055]). CPU sẽ tiếp nhận ma trận này để làm bước cuối cùng: tính argmax (tìm ID từ vựng có xác suất cao nhất), gộp các token trùng lặp (CTC Decode) và map sang chuỗi văn bản UTF-8 (Anh/Trung/Hàn). Tác vụ này tốn chưa tới 1ms trên CPU nhưng lại bất khả thi nếu ép NPU phải làm vì nó mang nặng tính logic chuỗi.
 
 **Kết luận:** Chiến lược thiết kế **Hybrid (CPU lo tiền xử lý/hậu xử lý, NPU gánh 100% mạng Neural)** là kiến trúc triển khai tiêu chuẩn và thực tế nhất hiện nay để cân bằng giữa hiệu năng, độ trễ và khả năng tương thích phần cứng.
