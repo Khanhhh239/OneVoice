@@ -10,8 +10,7 @@ Dưới đây là giải thích chi tiết về chức năng của từng file/f
 ### Dữ liệu & Benchmark
 - fetch_asr_data.py: Tải và chuẩn bị dữ liệu âm thanh mẫu từ dataset FLEURS (tạo ra thư mục data/asr).
 - mix_asr_noise.py: Trộn nhiễu (noise) vào audio để tạo tập dữ liệu test đánh giá độ bền (robustness) của model trong môi trường ồn (tạo ra thư mục data/asr_mixed).
-- 
-un_all_asr.py: Chạy toàn bộ các bài test benchmark cho tất cả các ứng viên ASR (PhoWhisper, SenseVoice, Zipformer, Moonshine, Qwen).
+- un_all_asr.py: Chạy toàn bộ các bài test benchmark cho tất cả các ứng viên ASR (PhoWhisper, SenseVoice, Zipformer, Moonshine, Qwen).
 
 ### Scripts Kiểm thử (Test Scripts)
 - 	est_asr_vi.py: Benchmark cho mô hình PhoWhisper (Tiếng Việt).
@@ -22,7 +21,7 @@ un_all_asr.py: Chạy toàn bộ các bài test benchmark cho tất cả các �
 
 ### Pipeline Tích hợp (Unified Pipeline)
 - unified_asr.py: File cấu trúc luồng (Pipeline) kết hợp Zipformer (Tiếng Việt) và SenseVoice (Anh/Trung/Hàn), có hỗ trợ cờ bật/tắt module khử nhiễu GTCRN tự động trước khi nhận dạng.
-- 	est_unified_asr.py: Chạy test kiểm thử cho pipeline tích hợp phía trên.
+- est_unified_asr.py: Chạy test kiểm thử cho pipeline tích hợp phía trên.
 
 ### Quantization & NPU Deployment (SenseVoice)
 - step4_s1_export_sensevoice_onnx.py: Trích xuất (Export) mô hình SenseVoice-Small sang định dạng ONNX với input kích thước tĩnh (Static Shape).
