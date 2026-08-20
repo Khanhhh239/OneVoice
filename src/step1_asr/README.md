@@ -91,15 +91,15 @@ Giải pháp của nhóm là **"Nướng" (Bake) 100% thuật toán từ âm tha
 **Sơ đồ luồng xử lý E2E:**
 ```mermaid
 graph TD
-    A(Âm thanh thô WAV<br/>16kHz, float32) -->|NPU - 100%| B
-    subgraph Quá trình hoàn toàn trên Chip NPU (Hexagon)
-        B[WavFrontend<br/>- Dùng Conv1D để Framing<br/>- Dùng ma trận Matmul tĩnh thay cho FFT]
-        B -->|Đặc trưng Fbank [1, T, 560]| C[SenseVoice Encoder<br/>Transformer 50 layers]
-        C -->|Đặc trưng ẩn [1, T', 512]| D[Mạng CTC Head]
-        D -->|Lấy Argmax| E[Mảng Token IDs]
+    A("Âm thanh thô WAV<br/>16kHz, float32") -->|"NPU - 100%"| B
+    subgraph npu_process ["Quá trình hoàn toàn trên Chip NPU (Hexagon)"]
+        B["WavFrontend<br/>- Dùng Conv1D để Framing<br/>- Dùng ma trận Matmul tĩnh thay cho FFT"]
+        B -->|"Đặc trưng Fbank [1, T, 560]"| C["SenseVoice Encoder<br/>Transformer 50 layers"]
+        C -->|"Đặc trưng ẩn [1, T', 512]"| D["Mạng CTC Head"]
+        D -->|"Lấy Argmax"| E["Mảng Token IDs"]
     end
-    E -->|CPU - Rất nhẹ| F(Từ điển Tokenizer<br/>Dịch ID thành Chữ)
-    F --> G([Đầu ra Văn bản Text])
+    E -->|"CPU - Rất nhẹ"| F("Từ điển Tokenizer<br/>Dịch ID thành Chữ")
+    F --> G(["Đầu ra Văn bản Text"])
 ```
 *Ghi chú: Giờ đây CPU chỉ làm đúng một việc là tra từ điển (Lookup) mất ~0.1ms.*
 
