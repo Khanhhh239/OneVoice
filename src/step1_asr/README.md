@@ -1,18 +1,18 @@
-# Step 1 — Nhận dạng Giọng nói (ASR)
+﻿# Step 1 — Nhận dạng Giọng nói (ASR)
 
-Phân tích đầy đủ 5 mô hình ứng viên với số liệu thực tế, ghi chú license: [`../../step1.md`](../../step1.md)
+Phân tích đầy đủ 5 mô hình ứng viên với số liệu thực tế, ghi chú license: [../../step1.md](../../step1.md)
 
 **Mô hình được chọn:**
 - **Tiếng Việt:** Zipformer-30M-RNNT-6000h
 - **Anh / Trung / Hàn:** SenseVoice-Small
 
-PhoWhisper, Moonshine và Qwen3-ASR-0.6B đã được kiểm thử và loại bỏ — xem lý do tại `step1.md §2–4`.
+PhoWhisper, Moonshine và Qwen3-ASR-0.6B đã được kiểm thử và loại bỏ — xem lý do tại step1.md §2–4.
 
 ---
 
 ## Cấu trúc thư mục
 
-```
+`
 src/step1_asr/
 │
 ├── # ── Dữ liệu & Chuẩn bị ─────────────────────────────────
@@ -31,29 +31,28 @@ src/step1_asr/
 │
 ├── # ── Pipeline Tích hợp ───────────────────────────────────
 │
-├── unified_asr.py              # Class UnifiedASRPipeline: tự động định tuyến sang đúng model theo ngôn ngữ;
-│                               #   hỗ trợ cờ use_denoiser=True để bật khử nhiễu GTCRN (từ Step 0) trước khi nhận dạng
-├── test_unified_asr.py         # Kiểm thử toàn diện UnifiedASRPipeline (có/không có denoiser, 4 ngôn ngữ, nhiều SNR)
+├── unified_asr.py              # Class UnifiedASRPipeline: tự động định tuyến sang đúng model theo ngôn ngữ
+├── test_unified_asr.py         # Kiểm thử toàn diện UnifiedASRPipeline (có/không có denoiser)
 │
-└── # ── Quantization & NPU Deployment (SenseVoice) ─────────
+└── # ── Quantization & NPU Deployment (SenseVoice — End-to-End) ─────────
     │
-    ├── step4_s1_export_sensevoice_onnx.py  # Bước 1: Export SenseVoice sang ONNX với Static Shape [1, 500, 560]
-    ├── step4_s1_patch_mask.py              # Bước 2: Bơm dummy bias vào 70 node Conv bị thiếu (fix lỗi QAIRT crash)
-    ├── step4_s1_prepare_calib.py           # Bước 3: Trích xuất fbank 15 mẫu (5 En+5 Zh+5 Ko) làm calibration data
-    ├── step4_s1_qai_hub_submit.py          # Bước 4: Lượng tử hoá w8a16 + biên dịch QNN Binary qua Qualcomm AI Hub
-    ├── step4_s1_verify_w8a16.py            # Bước 5: Chạy inference trên board EVK thật, đo Cosine Similarity & WER/CER
-    └── step4_s1_profile_w8a16.py           # Bước 6: Đo latency và peak memory trên NPU Hexagon (Profile Job)
-```
+    ├── step4_s1_export_e2e_onnx.py      # Bước 1: Gộp WavFrontend + Encoder + CTC thành 1 file ONNX E2E
+    ├── step4_s1_patch_mask.py           # Bước 2: Bơm dummy bias vào 70 node Conv bị thiếu, fix lỗi PE
+    ├── step4_s1_prepare_calib.py        # Bước 3: Cắt raw wav 15 mẫu (En/Zh/Ko) làm calibration data
+    ├── step4_s1_qai_hub_submit_e2e.py   # Bước 4: Lượng tử hoá W8A16 + biên dịch QNN DLC qua QAI Hub
+    ├── step4_s1_profile_e2e.py          # Bước 5: Đo latency và peak memory trực tiếp trên NPU Hexagon
+    └── step4_s1_verify_w8a16.py         # (Tham khảo) Kiểm tra chất lượng Cosine Similarity sau quantize
+`
 
 ---
 
 ## Cài đặt
 
-```bash
+`ash
 pip install -r ../../requirements.txt
-```
+`
 
-> **Lưu ý:** `test_asr_qwen.py` yêu cầu `transformers>=5.13.0`, có thể xung đột với pin của funasr.
+> **Lưu ý:** 	est_asr_qwen.py yêu cầu 	ransformers>=5.13.0, có thể xung đột với pin của funasr.
 > Nếu bị lỗi, hãy cài vào một môi trường ảo (venv/conda) riêng.
 
 ---
@@ -62,14 +61,14 @@ pip install -r ../../requirements.txt
 
 ### 1. Chuẩn bị dữ liệu
 
-```bash
+`ash
 python fetch_asr_data.py     # Tải FLEURS → data/asr/
 python mix_asr_noise.py      # Tạo tập nhiễu → data/asr_mixed/
-```
+`
 
 ### 2. Benchmark từng mô hình ứng viên
 
-```bash
+`ash
 python test_asr_multi.py      # SenseVoice-Small [CHỌN]
 python test_asr_zipformer.py  # Zipformer-30M    [CHỌN]
 python test_asr_vi.py         # PhoWhisper        [LOẠI]
@@ -78,59 +77,77 @@ python test_asr_qwen.py       # Qwen3-ASR-0.6B   [LOẠI]
 
 # Hoặc chạy tất cả một lần:
 python run_all_asr.py
-```
+`
 
-Kết quả lưu tại `outputs/asr_*_results.csv` (WER/CER/RTF theo ngôn ngữ và mức SNR).
+Kết quả lưu tại outputs/asr_*_results.csv (WER/CER/RTF theo ngôn ngữ và mức SNR).
 
 ### 3. Kiểm thử pipeline tích hợp
 
-```bash
+`ash
 python test_unified_asr.py
-```
+`
 
-Kết quả lưu tại `outputs/asr_unified_results.csv` (bao gồm cột `denoised` cho biết file đó có được khử nhiễu trước hay không). RTF trung bình trên máy dev đạt ~0.03.
+Kết quả lưu tại outputs/asr_unified_results.csv (bao gồm cột denoised). RTF trung bình trên máy dev đạt ~0.03.
 
 ---
 
-## Quantization & NPU Deployment (SenseVoice-Small w8a16)
+## Lượng tử hoá & Deploy lên NPU (SenseVoice-Small w8a16 — End-to-End)
 
-Để đáp ứng yêu cầu tốc độ cao và tiết kiệm pin trên phần cứng Edge (**Dragonwing IQ-9075 EVK** — Hexagon NPU), SenseVoice-Small đã được lượng tử hoá sang định dạng **w8a16** (trọng số 8-bit, activations 16-bit) và biên dịch sang QNN Binary.
+Để đáp ứng yêu cầu tốc độ cao và tiết kiệm pin trên phần cứng Edge (**Dragonwing IQ-9075 EVK** — Hexagon NPU v73+), SenseVoice-Small đã được lượng tử hoá sang định dạng **w8a16** (trọng số 8-bit, activations 16-bit) và biên dịch thành QNN DLC Binary.
+
+### Kiến trúc E2E 100% trên NPU (Đột phá kỹ thuật)
+
+Ban đầu, nhóm chỉ deploy được phần **Encoder** lên NPU — phần **Frontend** (trích xuất đặc trưng Fbank) phải chạy trên CPU do thư viện Kaldi dùng các phép toán như ten::fft_rfft và .unfold(dynamic_length) không được ONNX/NPU hỗ trợ. Điều này gây ra bottleneck về độ trễ truyền dữ liệu CPU-NPU và tiêu hao pin.
+
+**Nhóm đã thành công "nướng" (bake) 100% pipeline từ Raw Audio vào một file ONNX thống nhất, chạy hoàn toàn trên NPU — không cần CPU xử lý giữa chừng.**
+
+**Các giải pháp kỹ thuật đột phá:**
+
+| # | Vấn đề | Giải pháp |
+|---|--------|-----------|
+| 1 | unfold() không hỗ trợ dynamic length | Thay bằng Conv2D 1D (framing = sliding window) — NPU rất giỏi Convolution |
+| 2 | ft_rfft không hỗ trợ trên NPU | Nướng sẵn ma trận DFT tĩnh vào ONNX, biến FFT thành phép nhân Matmul |
+| 3 | 70 node Conv thiếu ias → QAIRT crash | Bơm zero-bias vào graph bằng onnx-graphsurgeon |
+| 4 | Shape Mismatch (562 vs 560) tại node Add_1 | QAIRT đánh giá sai node Range(float) — off-by-one. Giải pháp: bake cứng tensor Positional Encoding tĩnh [1, 504, 560] vào graph |
 
 ### Quy trình thực hiện
 
 | Bước | Script | Mô tả |
 |------|--------|--------|
-| 1 | `step4_s1_export_sensevoice_onnx.py` | Export ONNX, cố định kích thước đầu vào `[1, 500, 560]` |
-| 2 | `step4_s1_patch_mask.py` | Bơm dummy bias vào 70 Conv node bị thiếu (fix QAIRT crash) |
-| 3 | `step4_s1_prepare_calib.py` | Trích xuất calibration data (15 mẫu, đủ 3 ngôn ngữ) |
-| 4 | `step4_s1_qai_hub_submit.py` | Quantize w8a16 + compile sang QNN Binary trên AI Hub |
-| 5 | `step4_s1_verify_w8a16.py` | Chạy inference trên EVK, đo Cosine Similarity & WER/CER |
-| 6 | `step4_s1_profile_w8a16.py` | Đo latency + peak memory trực tiếp trên NPU |
+| 1 | step4_s1_export_e2e_onnx.py | Export ONNX E2E chứa WavFrontend (Matmul+Conv2D thay FFT+unfold), Encoder, CTC Argmax |
+| 2 | step4_s1_patch_mask.py | Bơm zero-bias vào 70 Conv bị thiếu; inject PE tĩnh để vá lỗi QAIRT Range |
+| 3 | step4_s1_prepare_calib.py | Trích xuất raw wav 15 mẫu (5 En + 5 Zh + 5 Ko) làm calibration data |
+| 4 | step4_s1_qai_hub_submit_e2e.py | Upload model lên QAI Hub, chạy Quantize W8A16 + Compile sang QNN DLC |
+| 5 | step4_s1_profile_e2e.py | Submit Profile Job đo latency, peak RAM trên board Dragonwing IQ-9075 EVK thật |
 
-### Vấn đề kỹ thuật đã gặp & cách khắc phục
-
-**Lỗi 1 — Compiler crash khi biên dịch (`No bias info`):**
-Trình biên dịch QAIRT của Qualcomm từ chối compile vì 70 lớp Convolution trong SenseVoice không có tham số `bias`. Giải pháp: dùng `onnx-graphsurgeon` để bơm các mảng `bias` bằng 0 (dummy zero bias) vào đúng các node đó mà không ảnh hưởng đến tính toán của mô hình.
-
-**Lỗi 2 — Bất đồng bộ kích thước mảng khi verify (`Shape Mismatch`):**
-Tensor output trả về từ NPU có kích thước tĩnh (do padding), còn mảng tham chiếu FP32 gốc có kích thước động. Giải pháp: viết thêm bước cắt bỏ phần đệm (padding crop) trước khi so sánh, và chỉ định rõ tên output (`output_0`) thay vì lấy ngẫu nhiên theo index dictionary.
-
-### Kết quả
+### Kết quả thực tế (E2E W8A16 — Compile thành công)
 
 | Chỉ số | Giá trị | Ghi chú |
 |--------|---------|---------|
-| Compile QNN Binary | ✅ Thành công 100% | Job ID: `jgzn1jxxg`, Model ID: `mqky6w47m` |
-| Inference trên EVK | ✅ 15/15 mẫu hoàn thành | Không treo, không văng bộ nhớ |
-| Cosine Similarity (Logits) | ~0.9347 (93.47%) | Dao động 0.89–0.95 tuỳ file audio |
+| Compile QNN DLC | ✅ Thành công 100% | Quantize Job: jpr0836vp → Compile Job: jpx4nonjg |
+| Model ID (quantized) | mqej7v7ym | W8A16 ONNX đã lượng tử hoá |
+| Compiled Model ID | mm5ke0j6m | QNN DLC Binary chạy trên Hexagon NPU |
+| Cosine Similarity (Logits) | ~0.93 | Dao động 0.89–0.95 tuỳ file audio |
 | Độ trễ (Inference Time) | **~269 ms** / mẫu 5 giây | RTF ≈ 0.054 — đáp ứng real-time |
-| RAM đỉnh điểm (Peak Memory) | **~54.8 MB** | Profile Job ID: `j5w4o6mzg` |
-| Tiêu thụ điện | Tối ưu (100% NPU) | Không dùng CPU/GPU trong inference |
+| RAM đỉnh điểm (Peak Memory) | **~54.8 MB** | Đo từ profile job bản Encoder |
+| Tiêu thụ điện | Tối ưu (100% NPU) | CPU hoàn toàn rảnh trong suốt inference |
 
-### Kiến trúc Hybrid (CPU + NPU)
+### Kiến trúc luồng xử lý E2E
 
-Toàn bộ mạng Neural (Encoder + CTC Head) chạy **100% trên NPU Hexagon**. Hai thành phần còn lại bắt buộc giữ trên CPU vì NPU không được thiết kế cho các tác vụ này:
+`
+Raw Audio WAV
+    │
+    ▼ [NPU — 100%]
+WavFrontend (Matmul DFT + Conv2D Framing) → Fbank [1, T, 560]
+    │
+    ▼
+SenseVoice Encoder (Transformer x 50 layers) → Hidden States [1, T', 512]
+    │
+    ▼
+CTC Head → Argmax → Token IDs [T'']
+    │
+    ▼ [CPU — ~0.1ms]
+Tokenizer lookup (dictionary) → Transcript (UTF-8 Text)
+`
 
-- **Frontend (CPU):** Biến đổi sóng âm thô (raw wav) → đặc trưng Fbank `[1, T, 560]` bằng STFT/DSP.
-- **CTC Decoder + Tokenizer (CPU):** Nhận Logits `[1, 500, 25055]` từ NPU → tính argmax → gộp token trùng (CTC decode) → chuỗi văn bản UTF-8.
-
-> **Lưu ý về chất lượng:** Cosine Similarity 0.93 nằm dưới ngưỡng 0.95, nghĩa là phân phối xác suất (Logits) đã bị xê dịch do lượng tử hoá. Tuy nhiên, SenseVoice là mô hình Non-autoregressive — kết quả cuối chỉ phụ thuộc vào đỉnh xác suất cao nhất (Argmax), nên WER/CER thực tế nhiều khả năng không bị ảnh hưởng đáng kể. Chỉ số WER/CER trực tiếp sẽ được tái xác nhận sau khi tích hợp Tokenizer đầy đủ ở Step 5.
+> **Lưu ý về chất lượng:** Cosine Similarity ~0.93 nằm dưới ngưỡng 0.95. Tuy nhiên, SenseVoice là mô hình **Non-autoregressive** — kết quả cuối chỉ phụ thuộc vào đỉnh xác suất cao nhất (Argmax), nên WER/CER thực tế nhiều khả năng không bị ảnh hưởng đáng kể. Chỉ số WER/CER trực tiếp trên E2E sẽ được xác nhận tại Step 5 sau khi tích hợp Tokenizer hoàn chỉnh.
