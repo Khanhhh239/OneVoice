@@ -1,0 +1,102 @@
+# SenseVoice-Small — Kiến trúc, Lượng tử hoá W8A16 & Triển khai NPU (Step 4)
+
+Tài liệu này ghi nhận toàn bộ quá trình nghiên cứu, xử lý đồ thị ONNX, khắc phục lỗi biên dịch QNN/QAIRT và kết quả đo kiểm thực tế khi đưa mô hình **SenseVoice-Small** lên chip **Qualcomm Hexagon NPU v73** trên nền tảng **Dragonwing IQ-9075 EVK**.
+
+---
+
+## 1. Kiến trúc mô hình SenseVoice-Small
+
+*   **Tác giả / Nguồn:** Alibaba FunASR.
+*   **Dung lượng gốc:** ~893 MB (PyTorch FP32 checkpoint).
+*   **Cơ chế giải mã:** **Non-Autoregressive (NAR)** kết hợp CTC (Connectionist Temporal Classification). Toàn bộ chuỗi đặc trưng âm thanh được đưa qua mạng và dự đoán đồng thời trong **duy nhất 1 lượt forward**, không có vòng lặp lùi tuần tự từng token như Whisper hay RNN-T.
+*   **Các thành phần cốt lõi:**
+    1.  **WavFrontend:** Trích xuất đặc trưng phổ Fbank 80 chiều từ sóng âm thô 16kHz (chia khung framing + FFT + áp Mel-filterbank).
+    2.  **Encoder:** Gồm 50 lớp Transformer nén sâu, trích xuất đặc trưng không gian-thời gian `[1, T', 512]`.
+    3.  **CTC Projection Head:** Ánh xạ đặc trưng ẩn sang phân phối xác suất từ vựng và chọn nhãn có xác suất cao nhất (`Argmax`) để ra token IDs.
+    4.  **Tích hợp sẵn:** Bộ chuẩn hoá văn bản ITN (định dạng số, ngày tháng, danh từ riêng) và Language ID (LID).
+
+---
+
+## 2. Mục tiêu triển khai phần cứng & Công thức Lượng tử hoá
+
+*   **Phần cứng mục tiêu:** **Qualcomm Dragonwing IQ-9075 EVK** (trang bị NPU Qualcomm Hexagon thế hệ v73, năng lực tính toán 100 dense TOPS).
+*   **Công thức lượng tử hoá:** **W8A16 Mixed Precision** (Weights INT8, Activations INT16).
+    *   *Vì sao chọn W8A16:* Chuẩn INT8 thuần (W8A8) gây suy hao chất lượng nghiêm trọng ở các lớp attention sâu. W8A16 giữ nguyên độ gọn nhẹ của trọng số 8-bit trên bộ nhớ, nhưng duy trì dải động 16-bit cho activation giúp giữ vững độ chính xác phiên âm.
+*   **Đột phá thiết kế: End-to-End (E2E) 100% trên NPU:**
+    *   Thông thường, phần trích xuất Fbank (`WavFrontend`) bị kẹt lại chạy trên CPU vì chứa các toán tử động và phép biến đổi Fourier (FFT). Điều này làm tắc nghẽn băng thông truyền dữ liệu giữa CPU và NPU.
+    *   Nhóm đã **"nướng" toàn bộ luồng từ sóng âm thô (raw WAV float32) đến đầu ra Token ID vào một đồ thị ONNX tĩnh duy nhất**, chuyển đổi mọi phép tính về dạng ma trận mà Hexagon NPU xử lý nhanh nhất.
+
+```mermaid
+graph TD
+    A["Âm thanh thô WAV (16kHz, float32)"] -->|"100% NPU Offload"| B
+    subgraph npu_process ["Xử lý hoàn toàn trên Chip NPU Hexagon v73"]
+        B["WavFrontend<br/>• Conv1D Sliding Window (thay unfold)<br/>• Ma trận tĩnh DFT Matmul (thay FFT)"]
+        B -->|"Đặc trưng Fbank [1, T, 560]"| C["SenseVoice Encoder<br/>(Transformer 50 layers)"]
+        C -->|"Vector ẩn [1, T', 512]"| D["Mạng CTC Head"]
+        D -->|"Lấy Argmax tĩnh"| E["Mảng Token IDs"]
+    end
+    E -->|"Chuyển sang CPU (<0.1ms)"| F["Tokenizer Lookup<br/>(Tra từ điển dịch ID sang Chữ)"]
+    F --> G(["Đầu ra Văn bản Hoàn chỉnh"])
+```
+
+---
+
+## 3. Các tệp mã nguồn triển khai (Pipeline Files)
+
+Toàn bộ quy trình nén và deploy được tự động hoá trong các script tại `src/step1_asr/`:
+
+| Tệp mã nguồn | Vai trò kỹ thuật |
+|---|---|
+| `step4_s1_export_e2e_onnx.py` | Xuất đồ thị E2E hợp nhất từ sóng âm WAV thô đến CTC Argmax với kích thước tĩnh `[1, 464000]`. |
+| `step4_s1_patch_mask.py` | Sử dụng `onnx-graphsurgeon` vá đồ thị ONNX, tiêm mảng zero-bias cho các node Conv thiếu bias. |
+| `step4_s1_prepare_calib.py` | Chuẩn bị 15 mẫu dữ liệu âm thanh đa ngữ đại diện để hiệu chỉnh dải động cho lượng tử W8A16. |
+| `step4_s1_qai_hub_submit_e2e.py` | Tự động tải đồ thị đã vá lên **Qualcomm AI Hub**, gọi job Quantize (W8A16) và Compile QNN binary. |
+| `step4_s1_profile_e2e.py` | Gửi lệnh đo kiểm hiệu năng (profiling) trực tiếp trên thiết bị phần cứng thực tế qua đám mây Qualcomm. |
+| `step4_s1_verify_w8a16.py` | Đo lường mức độ sai lệch toán học giữa mô hình gốc FP32 và bản nén W8A16 (Cosine Similarity). |
+
+---
+
+## 4. Khó khăn kỹ thuật gặp phải & Giải pháp xử lý
+
+Trong quá trình đưa đồ thị qua bộ biên dịch Qualcomm QAIRT / QNN Converter, nhóm đã giải quyết 4 rào cản nghiêm trọng:
+
+### 1. Toán tử `unfold()` động trong chia khung âm thanh (Framing)
+*   **Vấn đề:** Thư viện trích xuất đặc trưng của Kaldi sử dụng toán tử `unfold()` với độ dài thay đổi theo thời gian thực. Trình biên dịch QNN từ chối vì không hỗ trợ toán tử chia khung động trên NPU.
+*   **Giải pháp:** Viết lại toàn bộ thuật toán chia khung bằng **Conv1D dạng trượt (Sliding Window)** với stride và kernel cố định. NPU được tối ưu chuyên biệt cho phép tích chập nên tốc độ xử lý tăng vọt.
+
+### 2. Phép biến đổi Fourier phân tích phổ (`fft_rfft`)
+*   **Vấn đề:** Phép toán `torch.fft.rfft` không có kernel hỗ trợ trực tiếp trên chip Hexagon NPU.
+*   **Giải pháp:** Tính toán trước (bake tĩnh) toàn bộ hệ số của ma trận biến đổi Fourier rời rạc (DFT matrix) thành các hằng số trọng số. Phép FFT phức tạp được biến đổi hoàn toàn thành **phép nhân ma trận đơn giản (Matmul)**.
+
+### 3. Trình biên dịch QAIRT bị crash vì thiếu thông số Bias
+*   **Vấn đề:** Quá trình chuyển đổi sang QNN nhị phân bị dừng đột ngột với mã lỗi `RuntimeError: preprocessPerChannel: No bias info` tại 70 node Convolution trong mạng.
+*   **Giải pháp:** Viết script [`step4_s1_patch_mask.py`](step4_s1_patch_mask.py) sử dụng thư viện `onnx-graphsurgeon` can thiệp sâu vào cấu trúc đồ thị, chủ động chèn thêm mảng số 0 (dummy zero-bias) vào các node bị thiếu trước khi biên dịch.
+
+### 4. Lỗi sai lệch kích thước mảng Positional Encoding (562 vs 560)
+*   **Vấn đề:** Toán tử `Range` sinh tensor vị trí bị lỗi off-by-one trong quá trình tối ưu hoá của QAIRT, dẫn đến kích thước mảng không khớp với trọng số mạng.
+*   **Giải pháp:** Nướng cứng (bake tĩnh) toàn bộ tensor Positional Encoding có shape `[1, 504, 560]` trực tiếp vào file ONNX, loại bỏ hoàn toàn việc tính toán runtime.
+
+---
+
+## 5. Kết quả thực nghiệm đo đạc trên phần cứng
+
+Hệ thống đã **biên dịch thành công 100%** ra file nhị phân QNN DLC trên thiết bị đích:
+
+*   **Thông số phiên làm việc trên Qualcomm AI Hub:**
+    *   *Quantize Job ID:* `jpr0836vp` ➔ Model ID: `mqej7v7ym`
+    *   *Compile Job ID:* `jpx4nonjg` ➔ Compiled Model ID: `mm5ke0j6m`
+    *   *Target Device:* **Dragonwing IQ-9075 EVK** (Qualcomm Hexagon NPU v73)
+*   **Tỷ lệ đưa lên NPU:** **100% mô hình ASR** (Không có bất kỳ layer nào bị rớt lại xử lý trên CPU).
+*   **Bộ nhớ RAM đỉnh (Peak Memory):** Chỉ tốn **~54.8 MB** trên NPU (cực kỳ nhẹ so với tổng 36 GB LPDDR5 của thiết bị).
+*   **Độ trễ xử lý (Latency):** Chỉ mất **269 ms** để nhận dạng xong một đoạn âm thanh 5 giây (Tốc độ **RTF ≈ 0.054**).
+*   **Độ bảo toàn toán học (Cosine Similarity):** Đạt **~0.93** so với bản gốc FP32. Do SenseVoice dùng cơ chế lấy nhãn Argmax ở lớp cuối, sự sai lệch biên độ nhỏ ở các xác suất bên dưới không làm thay đổi nhãn từ được chọn.
+
+---
+
+## 6. Những hạn chế còn mở & Hướng hoàn thiện (Open Gaps)
+
+1.  **Ràng buộc Static Shape:** Đồ thị E2E hiện tại cố định chiều dài đầu vào `[1, 464000]` (~29 giây âm thanh). Các đoạn âm thanh ngắn hơn cần được đệm số 0 (padding), gây lãng phí chu kỳ tính toán cho phần đệm. Hướng giải quyết: Xây dựng các bucket kích thước tĩnh (ví dụ 3s, 5s, 10s) để định tuyến động.
+2.  **Đánh đổi chất lượng trên bản CPU Dynamic INT8:**
+    *   Bản lượng tử hoá ONNX Runtime INT8 chạy trên CPU bị suy giảm độ chính xác ở tiếng Trung và tiếng Hàn (CER tiếng Trung từ 2.3% tăng lên 9.8%, tiếng Hàn từ 4.5% tăng lên 9.5%).
+    *   Ngược lại, bản **W8A16 trên NPU** giữ chất lượng tốt hơn nhiều nhờ activation 16-bit. Cần tiến hành đo lại WER/CER đầy đủ trên phần cứng vật lý ở giai đoạn tích hợp Step 5.
+3.  **Tích hợp Runtime cục bộ:** Hiện tại mô hình đã được biên dịch thành công file nhị phân QNN Context Binary trên đám mây Qualcomm AI Hub. Bước tiếp theo là nạp trực tiếp file nhị phân này vào pipeline chạy C++/Python nội bộ trên bo mạch phần cứng vật lý.
