@@ -1,5 +1,8 @@
 # SenseVoice-Small — Kiến trúc, Lượng tử hoá W8A16 & Triển khai NPU (Step 4)
 
+> [!IMPORTANT]
+> **Thành viên phụ trách:** **Lê Gia Khánh** — AI Engineer (Đảm nhận mô hình SenseVoice-Small — ASR Đa ngữ Anh / Trung / Hàn).
+
 Tài liệu này ghi nhận toàn bộ quá trình nghiên cứu, xử lý đồ thị ONNX, khắc phục lỗi biên dịch QNN/QAIRT và kết quả đo kiểm thực tế khi đưa mô hình **SenseVoice-Small** lên chip **Qualcomm Hexagon NPU v73** trên nền tảng **Dragonwing IQ-9075 EVK**.
 
 ---
@@ -25,6 +28,32 @@ Tài liệu này ghi nhận toàn bộ quá trình nghiên cứu, xử lý đồ
 *   **Đột phá thiết kế: End-to-End (E2E) 100% trên NPU:**
     *   Thông thường, phần trích xuất Fbank (`WavFrontend`) bị kẹt lại chạy trên CPU vì chứa các toán tử động và phép biến đổi Fourier (FFT). Điều này làm tắc nghẽn băng thông truyền dữ liệu giữa CPU và NPU.
     *   Nhóm đã **"nướng" toàn bộ luồng từ sóng âm thô (raw WAV float32) đến đầu ra Token ID vào một đồ thị ONNX tĩnh duy nhất**, chuyển đổi mọi phép tính về dạng ma trận mà Hexagon NPU xử lý nhanh nhất.
+
+### 🌟 Khẳng định 100.0% Toàn bộ Mô hình Vận hành trên Hexagon NPU
+
+Báo cáo đo kiểm thực tế từ phần cứng Qualcomm AI Hub ([`hardware_profile_report.json`](../../outputs/sensevoice-e2e-onnx/hardware_profile_report.json)) xác nhận:
+*   **Tổng số toán tử (Total Operators):** `2,928 / 2,928` toán tử (**100.00% NPU Offload**).
+*   **CPU Fallback:** **0.00%** (Tuyệt đối không có bất kỳ layer hay toán tử nào bị văng về CPU).
+
+| Khối thành phần mô hình | Trước khi tối ưu (Bản gốc FunASR) | Sau khi tối ưu (Đồ thị E2E W8A16) | Nền tảng thực thi |
+|---|---|---|:---:|
+| **WavFrontend** *(Framing, FFT, Mel, LFR, CMVN)* | Chạy bằng Python/Kaldi trên CPU vì dùng `unfold()` động và `fft_rfft` (NPU không hỗ trợ). | Chuyển thành **Conv1D trượt tĩnh** và **Ma trận DFT Matmul tĩnh** nướng trực tiếp vào ONNX. | **100% NPU** |
+| **SenseVoice Encoder** *(50 Layers Transformer)* | Chạy FP32 nặng nề, dải động lớn. | Lượng tử hoá **W8A16**, vá mảng Positional Encoding tĩnh và tiêm Zero-Bias cho Conv nodes. | **100% NPU** |
+| **CTC Projection Head** | Tích chập chiếu ra 25,055 từ vựng. | Ánh xạ trực tiếp sang không gian xác suất token trên NPU. | **100% NPU** |
+| **CTC Argmax** | Trả ma trận xác suất khổng lồ `[1, 500, 25055]` (~50MB) về CPU rồi CPU mới tìm số lớn nhất. | **Gắn toán tử `Argmax` vào cuối đồ thị ONNX**. NPU tự tìm số lớn nhất và chỉ xuất mảng số nguyên `[1, 504]` (~2KB). | **100% NPU** |
+
+#### Vai trò tối giản của CPU trên thiết bị:
+CPU trên bo mạch chỉ đảm nhận đúng **2 thao tác logic phần mềm cực nhẹ (thời gian xử lý < 0.1 mili-giây)**:
+1.  **Lúc bắt đầu:** Đọc mảng âm thanh từ Microphone đưa vào RAM và chuyển con trỏ bộ nhớ (pointer) cho NPU.
+2.  **Lúc kết thúc:** Nhận mảng 504 số Token ID từ NPU và thực hiện tra từ điển:
+    *   *CTC Collapse:* Bỏ số 0 (blank) và gộp các số trùng nhau liên tiếp (ví dụ: `[0, 24885, 24885, 0]` $ightarrow$ `[24885]`).
+    *   *SentencePiece Vocab Lookup:* Tra bảng từ vựng (`24885` $ightarrow$ `"the"`).  
+*(Thao tác này là xử lý chuỗi logic thông thường của phần mềm ứng dụng, không phải là tính toán mạng nơ-ron).*
+
+#### Lợi ích vượt trội của thiết kế 100% NPU:
+*   **Triệt tiêu nghẽn cổ chai (Zero I/O Bottleneck):** Không tốn thời gian truyền ma trận đặc trưng Fbank qua lại giữa CPU và NPU.
+*   **CPU hoàn toàn rảnh rỗi:** CPU không phải gánh tác vụ âm học nặng nề, có thể dành toàn bộ tài nguyên để xử lý phần dịch máy (NLLB MT) hoặc chuyển sang chế độ tiết kiệm pin.
+*   **Độ trễ siêu tốc:** Chỉ mất **189.4 ms** để xử lý xong một tệp âm thanh dài tới 29 giây (với một câu nói 5 giây thông thường, NPU chỉ mất khoảng **~32.6 ms**).
 
 ```mermaid
 graph TD
