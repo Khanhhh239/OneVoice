@@ -53,6 +53,8 @@ Toàn bộ quy trình nén và deploy được tự động hoá trong các scri
 | `step4_s1_qai_hub_submit_e2e.py` | Tự động tải đồ thị đã vá lên **Qualcomm AI Hub**, gọi job Quantize (W8A16) và Compile QNN binary. |
 | `step4_s1_profile_e2e.py` | Gửi lệnh đo kiểm hiệu năng (profiling) trực tiếp trên thiết bị phần cứng thực tế qua đám mây Qualcomm. |
 | `step4_s1_verify_w8a16.py` | Đo lường mức độ sai lệch toán học giữa mô hình gốc FP32 và bản nén W8A16 (Cosine Similarity). |
+| `submit_full_workbench_suite.py` | Tự động hóa submission toàn trình 3 công đoạn Quantize, Compile, Inference lên AI Hub Workbench. |
+| `decode_h5_results.py` | Trích xuất và giải mã tensor token ID từ file HDF5 output của Qualcomm AI Hub (CTC Collapse + SentencePiece). |
 
 ---
 
@@ -80,18 +82,24 @@ Trong quá trình đưa đồ thị qua bộ biên dịch Qualcomm QAIRT / QNN C
 
 ## 5. Kết quả thực nghiệm đo đạc trên phần cứng
 
-Hệ thống đã **biên dịch thành công 100%** ra file nhị phân QNN DLC trên thiết bị đích:
+Mô hình đã được **biên dịch và chạy profile thực tế thành công 100%** trên thiết bị phần cứng thật **Qualcomm Dragonwing IQ-9075 EVK**:
 
-*   **Thông số phiên làm việc trên Qualcomm AI Hub:**
-    *   *Quantize Job ID:* `jpr0836vp` ➔ Model ID: `mqej7v7ym`
-    *   *Compile Job ID:* `jpx4nonjg` ➔ Compiled Model ID: `mm5ke0j6m`
-    *   *Target Device:* **Dragonwing IQ-9075 EVK** (Qualcomm Hexagon NPU v73)
-*   **Tỷ lệ đưa lên NPU:** **100% mô hình ASR** (Không có bất kỳ layer nào bị rớt lại xử lý trên CPU).
-*   **Bộ nhớ RAM đỉnh (Peak Memory):** Chỉ tốn **~54.8 MB** trên NPU (cực kỳ nhẹ so với tổng 36 GB LPDDR5 của thiết bị).
-*   **Độ trễ xử lý (Latency):** Chỉ mất **269 ms** để nhận dạng xong một đoạn âm thanh 5 giây (Tốc độ **RTF ≈ 0.054**).
+*   **Thông số phiên làm việc trên Qualcomm AI Hub Workbench (Bộ Suite hoàn chỉnh):**
+    *   *Quantize Job (W8A16):* [j5m0d3r7g](https://workbench.aihub.qualcomm.com/jobs/j5m0d3r7g/) ➔ Model ID: `mqy53w9vn` (Status: **SUCCESS**)
+    *   *Compile Job (QNN DLC Binary):* [jp1nvelng](https://workbench.aihub.qualcomm.com/jobs/jp1nvelng/) ➔ Compiled Model ID: `mn1lz82pq` (Status: **SUCCESS**)
+    *   *Hardware Profile Job (Silicon Test):* [jgddzo6rg](https://workbench.aihub.qualcomm.com/jobs/jgddzo6rg/) (Status: **SUCCESS**, 100% NPU Offload)
+    *   *Hardware Inference Job (Silicon Test):* [jgly1k0l5](https://workbench.aihub.qualcomm.com/jobs/jgly1k0l5/) (Status: **SUCCESS**)
+    *   *Target Hardware:* **Dragonwing IQ-9075 EVK** (SoC Qualcomm Hexagon NPU thế hệ v73, 100 dense TOPS)
+*   **Tỷ lệ đưa lên NPU (Compute Unit Offload):** **100.00%**
+    *   Tổng số toán tử: **2,928 / 2,928 operators chạy hoàn toàn trên NPU Hexagon**.
+    *   **0.0% CPU Fallback** — CPU hoàn toàn rảnh rỗi, không xảy ra hiện tượng chuyển đổi context qua lại.
+*   **Độ trễ xử lý thực tế trên Silicon (Inference Latency):**
+    *   *Thời gian xử lý khung âm thanh tĩnh 29 giây (464,000 samples @ 16kHz):* Trung vị (Median) đạt **189.4 ms** (Thấp nhất: **183.66 ms**).
+    *   *Tốc độ thời gian thực (Real-Time Factor):* **RTF ≈ 0.0065** (Xử lý nhanh hơn thời gian thực gấp **153 lần**).
+    *   *Độ trễ tương đương cho một đoạn hội thoại 5 giây:* Chỉ khoảng **~32.6 ms**.
+*   **Bộ nhớ RAM đỉnh (Peak Inference Memory):** Chỉ tốn **~8.13 MB** (8,519,680 bytes) trong lúc suy luận và **~4.51 MB** lúc nạp mô hình vào NPU.
+*   **Thời gian nạp mô hình (Model Load Time):** Lần đầu (Cold load): **507.4 ms**; Lần sau (Warm load): **535.6 ms**.
 *   **Độ bảo toàn toán học (Cosine Similarity):** Đạt **~0.93** so với bản gốc FP32. Do SenseVoice dùng cơ chế lấy nhãn Argmax ở lớp cuối, sự sai lệch biên độ nhỏ ở các xác suất bên dưới không làm thay đổi nhãn từ được chọn.
-
----
 
 ## 6. Những hạn chế còn mở & Hướng hoàn thiện (Open Gaps)
 

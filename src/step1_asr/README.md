@@ -21,7 +21,7 @@ Sau khi đánh giá và benchmark thực nghiệm trên dữ liệu chuẩn FLEU
 
 > [!TIP]
 > **Triển khai NPU & Lượng tử hóa (Step 4):** Toàn bộ quy trình nén W8A16, xuất End-to-End ONNX, xử lý đồ thị GraphSurgeon và compile lên chip NPU Qualcomm Hexagon của SenseVoice-Small được tài liệu hoá riêng tại:
-> 👉 **[`step4_sensevoicesmall.md`](step4_sensevoicesmall.md)**.
+> 👉 **[`step4_sensevoice.md`](step4_sensevoice.md)**.
 
 ---
 
@@ -69,6 +69,16 @@ Thư mục `src/step1_asr/` được tổ chức thành các nhóm chức năng 
 ### 📁 Pipeline Tích hợp Định tuyến
 *   `unified_asr.py`: Chứa class `UnifiedASRPipeline` — đóng vai trò là bộ định tuyến thông minh: tự động nhận diện ngôn ngữ nói và điều hướng âm thanh vào đúng mô hình (Zipformer cho tiếng Việt, SenseVoice cho ngoại ngữ).
 *   `test_unified_asr.py`: Kịch bản kiểm thử toàn diện khả năng định tuyến và độ chính xác của pipeline tích hợp.
+
+### 📁 Triển khai Phần cứng & NPU Deployment (Step 4 — SenseVoice-Small)
+*   `step4_s1_export_e2e_onnx.py`: Xuất đồ thị End-to-End ONNX (tích hợp WavFrontend + Encoder + CTC Argmax) với static shape cho NPU.
+*   `step4_s1_patch_mask.py`: Vá đồ thị ONNX qua GraphSurgeon, tiêm mảng zero-bias cho các node Conv thiếu bias (fix QAIRT crash).
+*   `step4_s1_prepare_calib.py`: Chuẩn bị 15 mẫu dữ liệu âm thanh đa ngữ đại diện để hiệu chỉnh dải động cho lượng tử W8A16.
+*   `step4_s1_qai_hub_submit_e2e.py`: Tự động tải đồ thị lên Qualcomm AI Hub để Quantize (W8A16) và Compile QNN binary.
+*   `step4_s1_profile_e2e.py`: Chạy đo đạc hiệu năng (Profiling) trên phần cứng Dragonwing IQ-9075 EVK.
+*   `step4_s1_verify_w8a16.py`: Kiểm chứng độ lệch sai số cosine similarity giữa bản FP32 và W8A16.
+*   `submit_full_workbench_suite.py`: Script tự động hoá submission toàn bộ 3 công đoạn Quantize, Compile, Inference lên AI Hub Workbench.
+*   `decode_h5_results.py`: Giải mã tensor token ID từ file HDF5 output của Qualcomm AI Hub (CTC collapse + SentencePiece).
 
 ---
 
