@@ -212,7 +212,7 @@ Toàn bộ chi tiết kỹ thuật (job ID cụ thể, shape đã pin, bài họ
 
    | Thành viên | Nhiệm vụ phân công (Mô hình & Step) | Trạng thái |
    |---|---|:---:|
-   | **Trần Quốc Khánh** | • Silero VAD + GTCRN + MVDR/GSC (Step 0)<br>• Zipformer-30M (Vi) (Step 1)<br>• NLLB-200-distilled-600M (Step 2) | *Đã xong*<br>—<br>*Đã xong* |
+   | **Trần Quốc Khanh** | • Silero VAD + GTCRN + MVDR/GSC (Step 0)<br>• Zipformer-30M (Vi) (Step 1)<br>• NLLB-200-distilled-600M (Step 2) | *Đã xong*<br>—<br>*Đã xong* |
    | **Lê Gia Khánh** | • SenseVoice-Small (En/Zh/Ko) (Step 1) | — |
    | **Trần Trung Hiếu** | • MeloTTS-ZH (Zh) (Step 3) | — |
    | **Phạm Chấn Khoa** | • Supertonic (Ko/En) (Step 3) | — |
