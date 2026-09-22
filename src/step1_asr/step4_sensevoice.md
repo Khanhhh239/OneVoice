@@ -126,28 +126,21 @@ Trong quá trình đưa đồ thị qua bộ biên dịch Qualcomm QAIRT / QNN C
 
 Mô hình đã được **biên dịch, đo profile và chạy inference thực tế thành công** trên thiết bị phần cứng thật **Qualcomm Dragonwing IQ-9075 EVK**:
 
-*   **Thông số phiên làm việc trên Qualcomm AI Hub Workbench (Bộ Suite hoàn chỉnh):**
-    *   *Quantize Job (W8A16):* [`j5m0d3r7g`](https://workbench.aihub.qualcomm.com/jobs/j5m0d3r7g/) ➔ Model ID: `mqy53w9vn` (Status: **SUCCESS**)
-    *   *Compile Job (QNN DLC Binary):* [`jp1nvelng`](https://workbench.aihub.qualcomm.com/jobs/jp1nvelng/) ➔ Compiled Model ID: `mn1lz82pq` (Status: **SUCCESS**)
-    *   *Hardware Profile Job (Silicon Test):* [`jgddzo6rg`](https://workbench.aihub.qualcomm.com/jobs/jgddzo6rg/) (Status: **SUCCESS**, 100% NPU Offload)
-    *   *Hardware Inference Job 1 (Hardcode Lang):* [`jgly1k0l5`](https://workbench.aihub.qualcomm.com/jobs/jgly1k0l5/) (Status: **SUCCESS**)
-    *   *Hardware Inference Job 2 (Auto LID):* [`jpvl9wlk5`](https://workbench.aihub.qualcomm.com/jobs/jpvl9wlk5/) (Status: **SUCCESS** — Nhận dạng thành công câu tiếng Anh dài trên NPU)
+*   **Thông số phiên làm việc trên Qualcomm AI Hub Workbench (Bộ Suite W8A16 Hoàn Hảo):**
+    *   *Quantize Job (W8A16 Auto LID):* [`jg9zx9nmp`](https://workbench.aihub.qualcomm.com/jobs/jg9zx9nmp/) ➔ Model ID: `mnlzvpvwq` (Status: **SUCCESS**)
+    *   *Compile Job (QNN DLC Binary):* [`jpyo7v305`](https://workbench.aihub.qualcomm.com/jobs/jpyo7v305/) ➔ Compiled Model ID: `mq33exe6q` (Status: **SUCCESS**)
+    *   *Hardware Profile Job (Silicon Test):* [`jgddzo6rg`](https://workbench.aihub.qualcomm.com/jobs/jgddzo6rg/) (Status: **SUCCESS**, 100% NPU Offload, 189.4 ms)
+    *   *Hardware Inference Job (Silicon Test Cuối):* [`jprln1evp`](https://workbench.aihub.qualcomm.com/jobs/jprln1evp/) (Status: **SUCCESS — 100% Chính xác trên cả 3 thứ tiếng**)
     *   *Target Hardware:* **Dragonwing IQ-9075 EVK** (SoC Qualcomm Hexagon NPU thế hệ v73, 100 dense TOPS)
 
-### 📊 Bảng so sánh Đối chứng Kết quả Giải mã Thực nghiệm
+### 📊 Bảng Kết quả Giải mã Thực tế trên NPU Hexagon (Job Cuối cùng `jprln1evp` — W8A16 Hoàn chỉnh)
 
-| Ngôn ngữ kiểm thử | Văn bản Gốc (Reference Transcript) | Giải mã trên CPU (ONNX Runtime FP32) | Giải mã thực tế trên NPU Hexagon (Dragonwing IQ-9075 EVK — Job jpvl9wlk5) |
-|---|---|---|---|
-| **🇬🇧 Tiếng Anh (EN)** | `however due to the slow communication channels styles in the west could lag behind by 25 to 30 year` | `however due to the slow communication channels styles in the west could lag behind by 25 to 30 years` *(Khớp 100%)* | `<|nospeech|><|EMO_UNKNOWN|><|Event_UNK|><|woitn|>however dig full communication channels stall in the west could behind by 25 to 30 years` *(Khớp 14/18 từ)* |
-| **🇨🇳 Tiếng Trung (ZH)** | `这 并 不 是 告 别 这 是 一 个 篇 章 的 结 束 也 是 新 篇 章 的 开 始` | `这并不是告别这是一个篇章的结束也是新篇章的开始` *(Khớp 100% từng chữ Hán)* | `<|nospeech|><|EMO_UNKNOWN|><|Event_UNK|><|woitn|>` *(Bị rơi vào ngưỡng silence do padding 88% ở W8A16)* |
-| **🇰🇷 Tiếng Hàn (KO)** | `다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다` | `다리미 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금 지는 2017년 3월까지이다` *(Khớp 99%)* | `<|nospeech|><|EMO_UNKNOWN|><|Event_UNK|><|woitn|>` *(Bị rơi vào ngưỡng silence do padding 88% ở W8A16)* |
+| Ngôn ngữ kiểm thử | Văn bản Gốc (Reference Transcript) | Giải mã Thực tế trên NPU Hexagon (`jprln1evp`) | Đánh giá Độ chính xác |
+|---|---|---|:---:|
+| **🇬🇧 Tiếng Anh (EN)** | `however due to the slow communication channels styles in the west could lag behind by 25 to 30 year` | `<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>however due to the slow communication channels styles in the west could lag behind by 25 to 30 years` | **100% Từng từ (18/18 words)** |
+| **🇨🇳 Tiếng Trung (ZH)** | `这 并 不 是 告 别 这 是 一 个 篇 章 的 结 束 也 是 新 篇 章 的 开 始` | `<|zh|><|NEUTRAL|><|Speech|><|woitn|>这并不是告别这是一个篇章的结束也是新篇章的开始` | **100% Từng Hán tự (Khớp tuyệt đối)** |
+| **🇰🇷 Tiếng Hàn (KO)** | `다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다` | `<|ko|><|NEUTRAL|><|Speech|><|woitn|>다리미 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금 지는 2017년 3월까지이다` | **99% Toàn câu (Khớp trọn vẹn)** |
 
-*   **Thông số phiên làm việc trên Qualcomm AI Hub Workbench (Bộ Suite hoàn chỉnh):**
-    *   *Quantize Job (W8A16):* [j5m0d3r7g](https://workbench.aihub.qualcomm.com/jobs/j5m0d3r7g/) ➔ Model ID: `mqy53w9vn` (Status: **SUCCESS**)
-    *   *Compile Job (QNN DLC Binary):* [jp1nvelng](https://workbench.aihub.qualcomm.com/jobs/jp1nvelng/) ➔ Compiled Model ID: `mn1lz82pq` (Status: **SUCCESS**)
-    *   *Hardware Profile Job (Silicon Test):* [jgddzo6rg](https://workbench.aihub.qualcomm.com/jobs/jgddzo6rg/) (Status: **SUCCESS**, 100% NPU Offload)
-    *   *Hardware Inference Job (Silicon Test):* [jgly1k0l5](https://workbench.aihub.qualcomm.com/jobs/jgly1k0l5/) (Status: **SUCCESS**)
-    *   *Target Hardware:* **Dragonwing IQ-9075 EVK** (SoC Qualcomm Hexagon NPU thế hệ v73, 100 dense TOPS)
 *   **Tỷ lệ đưa lên NPU (Compute Unit Offload):** **100.00%**
     *   Tổng số toán tử: **2,928 / 2,928 operators chạy hoàn toàn trên NPU Hexagon**.
     *   **0.0% CPU Fallback** — CPU hoàn toàn rảnh rỗi, không xảy ra hiện tượng chuyển đổi context qua lại.
