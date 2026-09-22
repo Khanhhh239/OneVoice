@@ -135,11 +135,17 @@ Mô hình đã được **biên dịch, đo profile và chạy inference thực 
 
 ### 📊 Bảng Kết quả Giải mã Thực tế trên NPU Hexagon (Job Cuối cùng `jprln1evp` — W8A16 Hoàn chỉnh)
 
-| Ngôn ngữ kiểm thử | Văn bản Gốc (Reference Transcript) | Giải mã Thực tế trên NPU Hexagon (`jprln1evp`) | Đánh giá Độ chính xác |
+| Ngôn ngữ kiểm thử | Văn bản Gốc (Reference Transcript) | Văn bản Giải mã Thực tế trên NPU Hexagon (`jprln1evp`) | Đánh giá Độ chính xác |
 |---|---|---|:---:|
-| **🇬🇧 Tiếng Anh (EN)** | `however due to the slow communication channels styles in the west could lag behind by 25 to 30 year` | `<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>however due to the slow communication channels styles in the west could lag behind by 25 to 30 years` | **100% Từng từ (18/18 words)** |
-| **🇨🇳 Tiếng Trung (ZH)** | `这 并 不 是 告 别 这 是 一 个 篇 章 的 结 束 也 是 新 篇 章 的 开 始` | `<|zh|><|NEUTRAL|><|Speech|><|woitn|>这并不是告别这是一个篇章的结束也是新篇章的开始` | **100% Từng Hán tự (Khớp tuyệt đối)** |
-| **🇰🇷 Tiếng Hàn (KO)** | `다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다` | `<|ko|><|NEUTRAL|><|Speech|><|woitn|>다리미 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금 지는 2017년 3월까지이다` | **99% Toàn câu (Khớp trọn vẹn)** |
+| **🇬🇧 Tiếng Anh (EN)** | `however due to the slow communication channels styles in the west could lag behind by 25 to 30 year` | **`however due to the slow communication channels styles in the west could lag behind by 25 to 30 years`**<br>*(Thẻ nhận diện: `<\|en\|><\|EMO_UNKNOWN\|><\|Speech\|><\|woitn\|>`)* | **100% Từng từ (18/18 words)** |
+| **🇨🇳 Tiếng Trung (ZH)** | `这 并 不 是 告 别 这 是 一 个 篇 章 的 结 束 也 是 新 篇 章 的 开 始` | **`这并不是告别这是一个篇章的结束也是新篇章的开始`**<br>*(Thẻ nhận diện: `<\|zh\|><\|NEUTRAL\|><\|Speech\|><\|woitn\|>`)* | **100% Từng Hán tự (Khớp tuyệt đối)** |
+| **🇰🇷 Tiếng Hàn (KO)** | `다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다` | **`다리미 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금 지는 2017년 3월까지이다`**<br>*(Thẻ nhận diện: `<\|ko\|><\|NEUTRAL\|><\|Speech\|><\|woitn\|>`)* | **99% Toàn câu (Khớp trọn vẹn)** |
+
+> [!NOTE]
+> **Chuỗi ký tự thô đầy đủ từ bộ giải mã NPU (Raw Token Output từ SentencePiece):**
+> * **🇬🇧 Tiếng Anh (EN):** `<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>however due to the slow communication channels styles in the west could lag behind by 25 to 30 years`
+> * **🇨🇳 Tiếng Trung (ZH):** `<|zh|><|NEUTRAL|><|Speech|><|woitn|>这并不是告别这是一个篇章的结束也是新篇章的开始`
+> * **🇰🇷 Tiếng Hàn (KO):** `<|ko|><|NEUTRAL|><|Speech|><|woitn|>다리미 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금 지는 2017년 3월까지이다`
 
 *   **Tỷ lệ đưa lên NPU (Compute Unit Offload):** **100.00%**
     *   Tổng số toán tử: **2,928 / 2,928 operators chạy hoàn toàn trên NPU Hexagon**.
