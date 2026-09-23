@@ -46,10 +46,8 @@ Báo cáo đo kiểm thực tế từ phần cứng Qualcomm AI Hub ([`hardware_
 CPU trên bo mạch chỉ đảm nhận đúng **2 thao tác logic phần mềm cực nhẹ (thời gian xử lý < 0.1 mili-giây)**:
 1.  **Lúc bắt đầu:** Đọc mảng âm thanh từ Microphone đưa vào RAM và chuyển con trỏ bộ nhớ (pointer) cho NPU.
 2.  **Lúc kết thúc:** Nhận mảng 504 số Token ID từ NPU và thực hiện tra từ điển:
-    *   *CTC Collapse:* Bỏ số 0 (blank) và gộp các số trùng nhau liên tiếp (ví dụ: `[0, 24885, 24885, 0]` $
-ightarrow$ `[24885]`).
-    *   *SentencePiece Vocab Lookup:* Tra bảng từ vựng (`24885` $
-ightarrow$ `"the"`).  
+    *   *CTC Collapse:* Bỏ số 0 (blank) và gộp các số trùng nhau liên tiếp (ví dụ: `[0, 24885, 24885, 0]` $\rightarrow$ `[24885]`).
+    *   *SentencePiece Vocab Lookup:* Tra bảng từ vựng (`24885` $\rightarrow$ `"the"`).  
 *(Thao tác này là xử lý chuỗi logic thông thường của phần mềm ứng dụng, không phải là tính toán mạng nơ-ron).*
 
 #### Lợi ích vượt trội của thiết kế 100% NPU:
