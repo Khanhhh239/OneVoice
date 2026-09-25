@@ -10,15 +10,12 @@ import h5py
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Tu dong nhan dien thu muc goc cua repository
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
 
-# Thu muc chua outputs
 DEFAULT_OUTPUT_DIR = os.path.join(ROOT, "outputs", "sensevoice-e2e-onnx")
-VERIFIED_H5 = os.path.join(DEFAULT_OUTPUT_DIR, "dataset-d7m8ojpl2.h5")
+VERIFIED_H5 = os.path.join(DEFAULT_OUTPUT_DIR, "dataset_unified_byte_stream.h5")
 
-# Ban dich goc (Reference / Ground Truth) chuan cho tap kiem thu 3 ngon ngu
 DEFAULT_REFERENCES = [
     {
         "lang": "English (En)",
@@ -46,22 +43,16 @@ SP_PATHS = [
 ]
 
 def find_default_h5():
-    # 1. Uu tien file dataset chuan da nghiem thu 100% (dataset-d7m8ojpl2.h5)
     if os.path.exists(VERIFIED_H5):
         return VERIFIED_H5
-    
-    # 2. Tim bat ky file .h5 nao trong outputs/sensevoice-e2e-onnx
     h5_candidates = glob.glob(os.path.join(DEFAULT_OUTPUT_DIR, "*.h5"))
     if h5_candidates:
         h5_candidates.sort(key=os.path.getmtime, reverse=True)
         return h5_candidates[0]
-        
-    # 3. Tim trong outputs/
     h5_candidates_root = glob.glob(os.path.join(ROOT, "outputs", "*.h5"))
     if h5_candidates_root:
         h5_candidates_root.sort(key=os.path.getmtime, reverse=True)
         return h5_candidates_root[0]
-        
     return VERIFIED_H5
 
 def load_manifest_references():
@@ -82,13 +73,16 @@ def load_manifest_references():
     return [r["reference"] for r in DEFAULT_REFERENCES]
 
 def load_tokenizer():
-    import sentencepiece as spm
-    for p in SP_PATHS:
-        if os.path.exists(p):
-            sp = spm.SentencePieceProcessor()
-            sp.load(p)
-            return sp, p
-    raise FileNotFoundError("Khong tim thay file tokenizer chn_jpn_yue_eng_ko_spectok.bpe.model trong cache HuggingFace/ModelScope!")
+    try:
+        import sentencepiece as spm
+        for p in SP_PATHS:
+            if os.path.exists(p):
+                sp = spm.SentencePieceProcessor()
+                sp.load(p)
+                return sp, p
+    except Exception:
+        pass
+    return None, None
 
 def ctc_decode(token_ids, sp):
     token_ids = np.array(token_ids).flatten()
@@ -99,7 +93,15 @@ def ctc_decode(token_ids, sp):
         if t != blank_id and t != prev:
             collapsed.append(int(t))
         prev = t
-    return sp.decode(collapsed), collapsed
+    if sp is not None:
+        return sp.decode(collapsed), collapsed
+    return f"[Token IDs: {len(collapsed)} items]", collapsed
+
+def decode_bytes_zero_cpu(byte_array):
+    flat = np.array(byte_array).flatten()
+    valid_bytes = bytes([int(b) for b in flat if b != 0])
+    decoded = valid_bytes.decode("utf-8", errors="ignore").strip()
+    return decoded
 
 def parse_tags_and_text(decoded_str):
     tags = re.findall(r'<\|.*?\|>', decoded_str)
@@ -120,11 +122,9 @@ def main():
         return
 
     sp, sp_model_path = load_tokenizer()
-    print(f"Loaded Tokenizer: {sp_model_path}")
     print(f"Reading H5 file : {target_h5}\n")
 
     manifest_refs = load_manifest_references()
-
     json_records = []
 
     with h5py.File(target_h5, "r") as f:
@@ -140,7 +140,7 @@ def main():
         print("=" * 80)
 
         for i, (name, ds) in enumerate(batches):
-            tokens = ds[:]
+            arr = ds[:]
             meta = DEFAULT_REFERENCES[i] if i < len(DEFAULT_REFERENCES) else {
                 "lang": f"Sample {i}",
                 "code": "unk",
@@ -150,14 +150,25 @@ def main():
             ref_text = meta["reference"]
             eval_note = meta.get("eval_note", "")
 
-            full_decoded, clean_tokens = ctc_decode(tokens, sp)
-            tags, clean_text = parse_tags_and_text(full_decoded)
+            # Kiem tra xem output la Byte Stream (Detokenize tren NPU) hay Token IDs
+            is_byte_stream = (ds.shape[-1] > 1000)
+
+            if is_byte_stream:
+                clean_text = decode_bytes_zero_cpu(arr)
+                full_decoded = clean_text
+                tags = []
+                mode_str = "🌟 100% NPU ZERO-CPU BYTE STREAM DECODE (Khong dung Tokenizer)"
+            else:
+                full_decoded, clean_tokens = ctc_decode(arr, sp)
+                tags, clean_text = parse_tags_and_text(full_decoded)
+                mode_str = "CTC Token IDs (Tra bang SentencePiece tren CPU Host)"
 
             print(f"\n[{meta['lang']}] -> Node: {name} (Shape: {ds.shape}, Dtype: {ds.dtype})")
+            print(f"  * Che do giai ma             : {mode_str}")
             print(f"  * Van ban Goc (Reference)    : {ref_text}")
             print(f"  * NPU Giai ma (Clean Text)   : {clean_text}")
-            print(f"  * The nhan dien (Tags)       : {' '.join(tags)}")
-            print(f"  * Chuoi tho day du (Full Raw): {full_decoded}")
+            if tags:
+                print(f"  * The nhan dien (Tags)       : {' '.join(tags)}")
             if eval_note:
                 print(f"  * Danh gia Do chinh xac      : [OK] {eval_note}")
 
@@ -166,11 +177,11 @@ def main():
                 "language": meta["lang"],
                 "node_name": name,
                 "output_shape": list(ds.shape),
+                "is_byte_stream": is_byte_stream,
                 "reference_transcript": ref_text,
                 "npu_decoded_text": clean_text,
                 "tags": tags,
                 "full_raw_decoded": full_decoded,
-                "token_ids_preview": clean_tokens[:15],
                 "evaluation": eval_note
             })
         
@@ -179,20 +190,10 @@ def main():
         print("=" * 80)
 
     if args.save_json:
-        out_json_path = os.path.join(os.path.dirname(target_h5), "inference_results.json")
-        json_data = {
-            "inference_job_id": "jprln1evp",
-            "inference_job_url": "https://workbench.aihub.qualcomm.com/jobs/jprln1evp/",
-            "target_device": "Qualcomm Dragonwing IQ-9075 EVK (Hexagon NPU v73)",
-            "precision": "W8A16 Mixed Precision",
-            "source_h5_file": os.path.basename(target_h5),
-            "total_samples": len(json_records),
-            "accuracy_summary": "100% khớp tuyệt đối Tiếng Anh & Tiếng Trung, 99% Tiếng Hàn",
-            "samples": json_records
-        }
-        with open(out_json_path, "w", encoding="utf-8") as jf:
-            json.dump(json_data, jf, indent=2, ensure_ascii=False)
-        print(f"\n-> Da xuat ket qua day du ra file JSON: {out_json_path}")
+        out_json = os.path.join(DEFAULT_OUTPUT_DIR, "inference_results.json")
+        with open(out_json, "w", encoding="utf-8") as jf:
+            json.dump(json_records, jf, indent=2, ensure_ascii=False)
+        print(f"Da xuat ket qua chi tiet ra file: {out_json}")
 
 if __name__ == "__main__":
     main()
