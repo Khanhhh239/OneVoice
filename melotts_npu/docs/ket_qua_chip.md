@@ -3,7 +3,21 @@
 Job xem tại `https://workbench.aihub.qualcomm.com/jobs/<ID>/` (tài khoản AI Hub của tác giả). Log đã lọc bỏ thanh tiến trình nằm ở `logs/chip/`.
 Compile fp16: `--target_runtime qnn_dlc --truncate_64bit_tensors --truncate_64bit_io`. Lượng tử hoá: thêm `--quantize_io` (không có `truncate_64bit_tensors`).
 
-## Graph chạy được
+## Bản 1 graph, 100% NPU (front bảng tĩnh + BERT + VITS)
+
+| Thí nghiệm | Job | Kết quả |
+|---|---|---|
+| Graph A lần 1 (front + BERT, id gộp `hi*128+lo`) | compile `jpy8m9j8g`, profile `jp8j1lzk5`, infer `jgd62jykp` | 1295/1295 NPU, 43.5 ms; BERT cosine 0.74 (lỗi fp16 id > 2048) |
+| Chuỗi graph A (lỗi) → VITS `g5`, 40 câu | `jg9odv88g` → `jg9odvx8g` | CER 14.8% (`chain_graphA_vits_bug.log`) |
+| Graph A đã sửa (so sánh hi/lo riêng) | compile `jpx0xvzjp`, profile `jp0o6yw2p`, infer `jp8j1onz5` | BERT cosine 0.99997–0.99998 với front gốc |
+| Chuỗi graph A (đã sửa) → VITS `g5`, 40 câu | `jp4e3qqlg` → `jp1o60ll5` | CER 13.0% — lỗi nằm ở VITS `g5` (`chain_graphA_vits_g5.log`) |
+| Tách tầng VITS (logw, w, m_p, z) | compile `jp3o9onnp`, infer `jpe6z6ovg` | m_p cosine 0.59–0.67 trong graph lớn |
+| `enc_p` riêng, 14 đầu ra | compile `jgk6463v5`, infer `jglwxw32p` | cosine 1.0 mọi lớp → lỗi chỉ xuất hiện trong graph lớn |
+| Link VITS `g5` → context binary | link `jp0o6qz6p`, profile `jpy8mwz7g` | 702 ms, nạp lần đầu **0.7 s** (DLC: 432 s) |
+| **`melo_one` (1 graph: byte → audio), DLC** | compile `jpy8mw17g`, profile `jp8j192x5`, infer `jgk68nv25` | 3451/3451 NPU, 721 ms, nạp 514 s; CER 6.9% (4 câu) |
+| **`melo_one` đã link, 40 câu** | link `jprx0xv7p`, profile `j5m9m9e9g`, infer `jgn1n10qp` | **CER 6.4%** (8 câu 2.6%, 32 mệnh đề 7.4%); 720 ms; nạp 0.9 s (`melo_one_linked_40.log`) |
+
+## Graph chạy được (bản 2 graph cũ)
 
 | Thí nghiệm | Compile | Profile | Inference | Kết quả |
 |---|---|---|---|---|
