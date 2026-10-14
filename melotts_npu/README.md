@@ -55,6 +55,21 @@ Câu dài hơn phải chia ở máy chủ. Chip luôn tính đủ 384 frame nên
 Vì vậy bản triển khai là **fp16** (không lượng tử). Model chỉ có 52M tham số, khoảng 104 MB fp16, nên lượng tử không cần để giảm dung lượng.
 Chưa tìm ra op nào gây `MODEL_GRAPH_ERROR` ở bản lượng tử; để thử tiếp có thể lượng tử riêng vocoder.
 
+## Đo trên mẫu lớn hơn (40 mệnh đề FLEURS, CPU) — chỉnh nhiễu để tăng chất lượng
+
+8 câu quá ít để kết luận, nên đo thêm 40 mệnh đề (`step10_variants.py`, `results/cpu_variants_40clauses.json`):
+
+| Cấu hình | CER trung bình | Số câu có lỗi |
+|---|---|---|
+| Model gốc (`sdp_ratio=0.2`, nhiễu 0.6 ngẫu nhiên) | 6.8% | 18/40 |
+| Bản tĩnh, nhiễu 0.6, seed 0 (**đang dùng trên chip**) | 9.1% | 21/40 |
+| Bản tĩnh, nhiễu 0.6, seed 1 | 7.5% | 20/40 |
+| Bản tĩnh, nhiễu 0.667, seed 0 | 9.2% | 21/40 |
+| **Bản tĩnh, nhiễu 0.3, seed 0** | **6.6%** | 20/40 |
+
+Kết luận: lỗi phát âm phân tán ở từ khó chứ không có lỗi hệ thống, và hạ nhiễu xuống 0.3 giúp bản tĩnh bằng bản gốc.
+Chưa chạy lại trên chip với nhiễu 0.3 (graph trên chip hiện dùng 0.6); đổi `noise_scale` trong `melo_static.py` rồi xuất lại.
+
 ## Giới hạn
 
 - Mới thử 8 câu ngắn, một giọng (ZH), không có đánh giá nghe chủ quan (MOS).
